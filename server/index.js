@@ -34,13 +34,19 @@ io.on("connection", (socket) => {
 
     const room = rooms[roomId];
 
-    if (room.players.length < 2) {
-      room.players.push(socket.id);
-      const symbol = room.players.length === 1 ? "X" : "O";
+    if (!room.players.includes(socket.id) && room.players.length < 2) {
+  room.players.push(socket.id);
 
-      socket.emit("player-assigned", symbol);
-      io.to(roomId).emit("state-update", room);
-    }
+  console.log("ROOM PLAYERS:", room.players);
+
+  const symbol = room.players.length === 1 ? "X" : "O";
+
+  console.log("Assigning", symbol, "to", socket.id);
+
+  socket.emit("player-assigned", symbol);
+  io.to(roomId).emit("state-update", room);
+}
+
   });
 
   socket.on("make-move", ({ roomId, index }) => {
@@ -58,6 +64,17 @@ io.on("connection", (socket) => {
 
     io.to(roomId).emit("state-update", room);
   });
+
+  socket.on("reset-game", ({ roomId }) => {
+  const room = rooms[roomId];
+  if (!room) return;
+
+  room.board = Array(27).fill(null);
+  room.playerTurn = "X";
+
+  io.to(roomId).emit("state-update", room);
+});
+
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);

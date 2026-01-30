@@ -1,11 +1,13 @@
 export default function GameUI({
   player,
+  playerSymbol,
   winnerInfo,
   resetGame,
   setActiveLayer,
   board,
   handleMove,
 }) {
+
   // 🛡 Guard against undefined board during render
   if (!board || board.length !== 27) {
     return null;
@@ -25,11 +27,15 @@ export default function GameUI({
         fontFamily: "sans-serif",
       }}
     >
-      {!winnerInfo ? (
-        <h3>Turn: {player}</h3>
-      ) : (
-        <h3>Winner: {winnerInfo.winner} 🏆</h3>
-      )}
+      <h4 style={{ marginBottom: "6px" }}>
+  Your Symbol: {playerSymbol || "Waiting..."}
+</h4>
+
+{!winnerInfo ? (
+  <h3>Turn: {player}</h3>
+) : (
+  <h3>Winner: {winnerInfo.winner} 🏆</h3>
+)}
 
       <button
         onClick={resetGame}
