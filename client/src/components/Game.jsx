@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import  socket  from "../network/socket"; // make sure this file exists
 import GameUI from "./GameUI";
-import { checkWinner } from "../game/gameLogic";
+import VideoChat from "./VideoChat";
+
+
 
 
 export default function Game({ children }) {
@@ -22,14 +24,13 @@ console.log("Emitting join-room", roomId);
   socket.on("player-assigned", (symbol) => {
     console.log("Assigned as:", symbol);
     setPlayerSymbol(symbol);
+    
   });
 
   socket.on("state-update", (state) => {
   setBoard(state.board);
   setPlayer(state.playerTurn);
-
-  const result = checkWinner(state.board);
-  setWinnerInfo(result || null);
+  setWinnerInfo(state.winner || null)
 });
 
   return () => {
@@ -67,6 +68,7 @@ console.log("Emitting join-room", roomId);
   setActiveLayer={setActiveLayer}
   board={board}
   handleMove={handleMove}
+  
 />
 
 
@@ -77,6 +79,7 @@ console.log("Emitting join-room", roomId);
         winnerInfo,
         activeLayer,
       })}
+      <VideoChat roomId={roomId} />
     </>
   );
 }
