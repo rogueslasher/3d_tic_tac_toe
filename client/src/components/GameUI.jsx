@@ -6,6 +6,7 @@ export default function GameUI({
   setActiveLayer,
   board,
   handleMove,
+  roomId
 }) {
 
   // 🛡 Guard against undefined board during render
@@ -31,6 +32,10 @@ export default function GameUI({
   Your Symbol: {playerSymbol || "Waiting..."}
 </h4>
 
+<p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+  Room: {roomId}
+</p>
+
 {!winnerInfo ? (
   <h3>Turn: {player}</h3>
 ) : (
@@ -50,6 +55,25 @@ export default function GameUI({
       >
         Reset Game
       </button>
+
+
+      <button
+  onClick={() => {
+    const newRoom = Math.random().toString(36).substring(2, 8);
+    window.location.href = `/?room=${newRoom}`;
+  }}
+  style={{
+    marginTop: 6,
+    padding: "6px 12px",
+    borderRadius: "6px",
+    border: "none",
+    cursor: "pointer",
+    width: "100%",
+  }}
+>
+  Create New Room
+</button>
+
 
       <div style={{ marginTop: "12px" }}>
         <p style={{ marginBottom: "6px" }}>Mini Boards</p>
