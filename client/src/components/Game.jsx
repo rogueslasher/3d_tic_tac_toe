@@ -12,7 +12,10 @@ export default function Game({ children }) {
   const [winnerInfo, setWinnerInfo] = useState(null);
   const [activeLayer, setActiveLayer] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
-const roomId = "room1"; // temporary for now
+
+const params = new URLSearchParams(window.location.search);
+const roomId = params.get("room") || "default";
+
 
 
 useEffect(() => {
@@ -68,6 +71,7 @@ console.log("Emitting join-room", roomId);
   setActiveLayer={setActiveLayer}
   board={board}
   handleMove={handleMove}
+  roomId={roomId}
   
 />
 
