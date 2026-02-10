@@ -1,5 +1,4 @@
 
-
 export default function CubeGrid({
   board,
   onCellClick,

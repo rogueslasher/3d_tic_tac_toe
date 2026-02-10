@@ -123,8 +123,19 @@ io.on("connection", (socket) => {
 
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
+  console.log("User disconnected:", socket.id);
+
+  for (const roomId in rooms) {
+    const room = rooms[roomId];
+
+    room.players = room.players.filter(id => id !== socket.id);
+
+    // Optional: reset room if empty
+    if (room.players.length === 0) {
+      delete rooms[roomId];
+    }
+  }
+});
 });
 
 const PORT = process.env.PORT || 3001;

@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
-import  socket  from "../network/socket"; // make sure this file exists
+import  socket  from "../network/socket"; 
 import GameUI from "./GameUI";
 import VideoChat from "./VideoChat";
-
-
-
 
 export default function Game({ children }) {
   const [board, setBoard] = useState(Array(27).fill(null));
