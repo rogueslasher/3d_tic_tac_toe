@@ -47,7 +47,12 @@ const toggleCamera = () => {
 
       localVideoRef.current.srcObject = localStreamRef.current;
 
-      const peer = new RTCPeerConnection();
+      const peer = new RTCPeerConnection({
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" }
+  ]
+});
+
       peerRef.current = peer;
 
       localStreamRef.current.getTracks().forEach((track) => {
@@ -55,8 +60,11 @@ const toggleCamera = () => {
       });
 
       peer.ontrack = (event) => {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      };
+  if (remoteVideoRef.current.srcObject !== event.streams[0]) {
+    remoteVideoRef.current.srcObject = event.streams[0];
+  }
+};
+
 
       peer.onicecandidate = (event) => {
         if (event.candidate) {
