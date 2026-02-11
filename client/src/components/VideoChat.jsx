@@ -95,12 +95,14 @@ const toggleCamera = () => {
         }
       });
 
-      socket.on("start-call", async () => {
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
+      socket.on("ready-for-call", async () => {
+  if (peerRef.current.signalingState === "stable") {
+    const offer = await peerRef.current.createOffer();
+    await peerRef.current.setLocalDescription(offer);
+    socket.emit("webrtc-offer", { roomId, offer });
+  }
+});
 
-        socket.emit("webrtc-offer", { roomId, offer });
-      });
     }
 
     init();

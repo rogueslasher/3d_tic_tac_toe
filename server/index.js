@@ -77,8 +77,9 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("state-update", room);
 
       if (room.players.length === 2) {
-        socket.to(roomId).emit("start-call");
-      }
+  io.to(roomId).emit("ready-for-call");
+}
+
 
 
     }
