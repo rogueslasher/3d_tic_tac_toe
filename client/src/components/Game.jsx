@@ -14,29 +14,31 @@ const params = new URLSearchParams(window.location.search);
 const roomId = params.get("room") || "default";
 
 
-
 useEffect(() => {
   console.log("Game useEffect running");
 
-  
-
+  // Attach listeners FIRST
   socket.on("player-assigned", (symbol) => {
     console.log("Assigned as:", symbol);
     setPlayerSymbol(symbol);
-    
   });
 
   socket.on("state-update", (state) => {
-  setBoard(state.board);
-  setPlayer(state.playerTurn);
-  setWinnerInfo(state.winner || null)
-});
+    setBoard(state.board);
+    setPlayer(state.playerTurn);
+    setWinnerInfo(state.winner || null);
+  });
+
+  // THEN emit join-room
+  console.log("Emitting join-room", roomId);
+  socket.emit("join-room", { roomId });
 
   return () => {
     socket.off("player-assigned");
     socket.off("state-update");
   };
 }, [roomId]);
+
 
 
  const handleMove = (index) => {

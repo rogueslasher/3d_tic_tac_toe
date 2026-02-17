@@ -97,14 +97,12 @@ const peer = new RTCPeerConnection({
       });
 
       socket.on("ready-for-call", async () => {
-        if (peerRef.current.signalingState === "stable") {
-          const offer = await peerRef.current.createOffer();
-          await peerRef.current.setLocalDescription(offer);
-          socket.emit("webrtc-offer", { roomId, offer });
-          socket.emit("join-room", { roomId });
-          console.log("READY FOR CALL RECEIVED");
-        }
-      });
+  console.log("READY FOR CALL RECEIVED");
+  const offer = await peer.createOffer();
+  await peer.setLocalDescription(offer);
+  socket.emit("webrtc-offer", { roomId, offer });
+});
+
 
     }
 
