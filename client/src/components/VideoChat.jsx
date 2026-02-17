@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState} from "react";
+import { useEffect, useRef, useState } from "react";
 import socket from "../network/socket";
 
 export default function VideoChat({ roomId }) {
@@ -12,26 +12,26 @@ export default function VideoChat({ roomId }) {
 
 
   const toggleMute = () => {
-  const audioTrack = localStreamRef.current
-    ?.getTracks()
-    .find(track => track.kind === "audio");
+    const audioTrack = localStreamRef.current
+      ?.getTracks()
+      .find(track => track.kind === "audio");
 
-  if (audioTrack) {
-    audioTrack.enabled = !audioTrack.enabled;
-    setIsMuted(!audioTrack.enabled);
-  }
-};
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
+    }
+  };
 
-const toggleCamera = () => {
-  const videoTrack = localStreamRef.current
-    ?.getTracks()
-    .find(track => track.kind === "video");
+  const toggleCamera = () => {
+    const videoTrack = localStreamRef.current
+      ?.getTracks()
+      .find(track => track.kind === "video");
 
-  if (videoTrack) {
-    videoTrack.enabled = !videoTrack.enabled;
-    setIsCameraOff(!videoTrack.enabled);
-  }
-};
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setIsCameraOff(!videoTrack.enabled);
+    }
+  };
 
 
 
@@ -40,7 +40,7 @@ const toggleCamera = () => {
     let localStream;
 
     async function init() {
-      localStreamRef.current= await navigator.mediaDevices.getUserMedia({
+      localStreamRef.current = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
@@ -49,9 +49,17 @@ const toggleCamera = () => {
 
       const peer = new RTCPeerConnection({
   iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
+    { urls: "stun:stun.l.google.com:19302" },
+    {
+      urls: "turn:your-turn-server.com:3478",
+      username: "user",
+      credential: "pass"
+    }
   ]
 });
+peer.oniceconnectionstatechange = () => {
+  console.log("ICE STATE:", peer.iceConnectionState);
+};
 
       peerRef.current = peer;
 
@@ -60,10 +68,10 @@ const toggleCamera = () => {
       });
 
       peer.ontrack = (event) => {
-  if (remoteVideoRef.current.srcObject !== event.streams[0]) {
-    remoteVideoRef.current.srcObject = event.streams[0];
-  }
-};
+        if (remoteVideoRef.current.srcObject !== event.streams[0]) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
 
 
       peer.onicecandidate = (event) => {
@@ -96,12 +104,12 @@ const toggleCamera = () => {
       });
 
       socket.on("ready-for-call", async () => {
-  if (peerRef.current.signalingState === "stable") {
-    const offer = await peerRef.current.createOffer();
-    await peerRef.current.setLocalDescription(offer);
-    socket.emit("webrtc-offer", { roomId, offer });
-  }
-});
+        if (peerRef.current.signalingState === "stable") {
+          const offer = await peerRef.current.createOffer();
+          await peerRef.current.setLocalDescription(offer);
+          socket.emit("webrtc-offer", { roomId, offer });
+        }
+      });
 
     }
 
@@ -115,82 +123,82 @@ const toggleCamera = () => {
     };
   }, [roomId]);
 
- return (
-  <>
-    {/* Remote Video */}
-    <video
-      ref={remoteVideoRef}
-      autoPlay
-      playsInline
-      style={{
-        position: "absolute",
-        bottom: 20,
-        right: 20,
-        width: 300,
-        height: 220,
-        objectFit: "cover",
-      }}
-    />
-
-    {/* Local Video Overlay */}
-    <video
-      ref={localVideoRef}
-      autoPlay
-      playsInline
-      muted
-      style={{
-        position: "absolute",
-        bottom: 30,
-        right: 30,
-        width: 90,
-        height: 65,
-        border: "none",
-        objectFit: "cover",
-      }}
-    />
-
-    {/* Controls */}
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        right: 20,
-        display: "flex",
-        gap: 8,
-      }}
-    >
-      <button
-        onClick={toggleMute}
+  return (
+    <>
+      {/* Remote Video */}
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
         style={{
-          width: 30,
-          height: 30,
-          borderRadius: "50%",
+          position: "absolute",
+          bottom: 20,
+          right: 20,
+          width: 300,
+          height: 220,
+          objectFit: "cover",
+        }}
+      />
+
+      {/* Local Video Overlay */}
+      <video
+        ref={localVideoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          position: "absolute",
+          bottom: 30,
+          right: 30,
+          width: 90,
+          height: 65,
           border: "none",
-          background: isMuted ? "#e53935" : "rgba(255,255,255,0.25)",
-          color: "white",
-          cursor: "pointer",
-          fontSize: 12,
+          objectFit: "cover",
+        }}
+      />
+
+      {/* Controls */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          right: 20,
+          display: "flex",
+          gap: 8,
         }}
       >
-        🎤
-      </button>
+        <button
+          onClick={toggleMute}
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: "50%",
+            border: "none",
+            background: isMuted ? "#e53935" : "rgba(255,255,255,0.25)",
+            color: "white",
+            cursor: "pointer",
+            fontSize: 12,
+          }}
+        >
+          🎤
+        </button>
 
-      <button
-        onClick={toggleCamera}
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: "50%",
-          border: "none",
-          background: isCameraOff ? "#e53935" : "rgba(255,255,255,0.25)",
-          color: "white",
-          cursor: "pointer",
-          fontSize: 12,
-        }}
-      >
-        📷
-      </button>
-    </div>
-  </>
-);
+        <button
+          onClick={toggleCamera}
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: "50%",
+            border: "none",
+            background: isCameraOff ? "#e53935" : "rgba(255,255,255,0.25)",
+            color: "white",
+            cursor: "pointer",
+            fontSize: 12,
+          }}
+        >
+          📷
+        </button>
+      </div>
+    </>
+  );
 }
