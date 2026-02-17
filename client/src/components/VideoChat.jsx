@@ -101,6 +101,7 @@ const peer = new RTCPeerConnection({
           const offer = await peerRef.current.createOffer();
           await peerRef.current.setLocalDescription(offer);
           socket.emit("webrtc-offer", { roomId, offer });
+          socket.emit("join-room", { roomId });
           console.log("READY FOR CALL RECEIVED");
         }
       });
