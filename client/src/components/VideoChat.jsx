@@ -101,6 +101,7 @@ const peer = new RTCPeerConnection({
           const offer = await peerRef.current.createOffer();
           await peerRef.current.setLocalDescription(offer);
           socket.emit("webrtc-offer", { roomId, offer });
+          console.log("READY FOR CALL RECEIVED");
         }
       });
 
@@ -108,12 +109,12 @@ const peer = new RTCPeerConnection({
 
     init();
 
-    return () => {
-      socket.off("webrtc-offer");
-      socket.off("webrtc-answer");
-      socket.off("webrtc-ice-candidate");
-      
-    };
+   return () => {
+  socket.off("webrtc-offer");
+  socket.off("webrtc-answer");
+  socket.off("webrtc-ice-candidate");
+  socket.off("ready-for-call");
+};
   }, [roomId]);
 
   return (
