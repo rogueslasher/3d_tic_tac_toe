@@ -17,9 +17,8 @@ const roomId = params.get("room") || "default";
 
 useEffect(() => {
   console.log("Game useEffect running");
-console.log("Emitting join-room", roomId);
 
-  socket.emit("join-room", { roomId });
+  
 
   socket.on("player-assigned", (symbol) => {
     console.log("Assigned as:", symbol);
