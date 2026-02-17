@@ -75,6 +75,11 @@ io.on("connection", (socket) => {
 
       socket.emit("player-assigned", symbol);
       io.to(roomId).emit("state-update", room);
+      console.log("ICE STATE:", peer.iceConnectionState);
+      peer.oniceconnectionstatechange = () => {
+  console.log("ICE STATE:", peer.iceConnectionState);
+};
+
 
       if (room.players.length === 2) {
   const firstPlayer = room.players[0];

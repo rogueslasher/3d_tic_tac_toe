@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import socket from "../network/socket";
+console.log("VIDEO BUILD VERSION 3");
 
 export default function VideoChat({ roomId }) {
   const localVideoRef = useRef(null);
@@ -52,9 +53,6 @@ const peer = new RTCPeerConnection({
     { urls: "stun:stun.l.google.com:19302" }
   ]
 });
-peer.oniceconnectionstatechange = () => {
-  console.log("ICE STATE:", peer.iceConnectionState);
-};
 
       peerRef.current = peer;
 
