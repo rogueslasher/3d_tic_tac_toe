@@ -75,23 +75,19 @@ io.on("connection", (socket) => {
 
       socket.emit("player-assigned", symbol);
       io.to(roomId).emit("state-update", room);
-      console.log("ICE STATE:", peer.iceConnectionState);
-      
-      peer.oniceconnectionstatechange = () => {
-  console.log("ICE STATE:", peer.iceConnectionState);
-};
 
+      // FIX: removed stray `peer` references that don't exist server-side —
+      // those lines were crashing the handler before ready-for-call could fire.
 
       if (room.players.length === 2) {
-  const firstPlayer = room.players[0];
-  io.to(firstPlayer).emit("ready-for-call");
-}
-
-
-
-
+        // FIX: emit to the *second* player (the one who just joined).
+        // Player[0] is already waiting; player[1] is guaranteed to have its
+        // WebRTC listeners initialised by the time this arrives because they
+        // just finished their own init() call.
+        socket.emit("ready-for-call");
+        console.log("Emitted ready-for-call to second player:", socket.id);
+      }
     }
-
   });
 
   socket.on("make-move", ({ roomId, index }) => {
@@ -116,7 +112,6 @@ io.on("connection", (socket) => {
     }
 
     io.to(roomId).emit("state-update", room);
-
   });
 
   socket.on("reset-game", ({ roomId }) => {
@@ -130,21 +125,18 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("state-update", room);
   });
 
-
   socket.on("disconnect", () => {
-  console.log("User disconnected:", socket.id);
+    console.log("User disconnected:", socket.id);
 
-  for (const roomId in rooms) {
-    const room = rooms[roomId];
+    for (const roomId in rooms) {
+      const room = rooms[roomId];
+      room.players = room.players.filter(id => id !== socket.id);
 
-    room.players = room.players.filter(id => id !== socket.id);
-
-    // Optional: reset room if empty
-    if (room.players.length === 0) {
-      delete rooms[roomId];
+      if (room.players.length === 0) {
+        delete rooms[roomId];
+      }
     }
-  }
-});
+  });
 });
 
 const PORT = process.env.PORT || 3001;

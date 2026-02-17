@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import socket from "../network/socket";
-console.log("VIDEO BUILD VERSION 3");
+console.log("VIDEO BUILD VERSION 4");
 
 export default function VideoChat({ roomId }) {
   const localVideoRef = useRef(null);
@@ -11,12 +11,13 @@ export default function VideoChat({ roomId }) {
   const [isCameraOff, setIsCameraOff] = useState(false);
   const localStreamRef = useRef(null);
 
+  // FIX: queue ICE candidates that arrive before remoteDescription is set
+  const iceCandidateQueue = useRef([]);
 
   const toggleMute = () => {
     const audioTrack = localStreamRef.current
       ?.getTracks()
-      .find(track => track.kind === "audio");
-
+      .find((track) => track.kind === "audio");
     if (audioTrack) {
       audioTrack.enabled = !audioTrack.enabled;
       setIsMuted(!audioTrack.enabled);
@@ -26,20 +27,14 @@ export default function VideoChat({ roomId }) {
   const toggleCamera = () => {
     const videoTrack = localStreamRef.current
       ?.getTracks()
-      .find(track => track.kind === "video");
-
+      .find((track) => track.kind === "video");
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
       setIsCameraOff(!videoTrack.enabled);
     }
   };
 
-
-
-
   useEffect(() => {
-    let localStream;
-
     async function init() {
       localStreamRef.current = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -48,12 +43,9 @@ export default function VideoChat({ roomId }) {
 
       localVideoRef.current.srcObject = localStreamRef.current;
 
-const peer = new RTCPeerConnection({
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
-  ]
-});
-
+      const peer = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
       peerRef.current = peer;
 
       localStreamRef.current.getTracks().forEach((track) => {
@@ -66,7 +58,6 @@ const peer = new RTCPeerConnection({
         }
       };
 
-
       peer.onicecandidate = (event) => {
         if (event.candidate) {
           socket.emit("webrtc-ice-candidate", {
@@ -76,44 +67,74 @@ const peer = new RTCPeerConnection({
         }
       };
 
+      peer.oniceconnectionstatechange = () => {
+        console.log("ICE STATE:", peer.iceConnectionState);
+      };
+
+      // FIX: helper to drain the ICE queue once remoteDescription is set
+      async function drainIceCandidateQueue() {
+        while (iceCandidateQueue.current.length > 0) {
+          const candidate = iceCandidateQueue.current.shift();
+          try {
+            await peer.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (err) {
+            console.error("Error adding queued ICE candidate:", err);
+          }
+        }
+      }
+
+      // FIX: Player[0] (the waiter) receives the offer and answers
       socket.on("webrtc-offer", async ({ offer }) => {
+        console.log("Received offer, creating answer");
         await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        await drainIceCandidateQueue();
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
-
         socket.emit("webrtc-answer", { roomId, answer });
       });
 
+      // FIX: Player[1] (the offerer) receives the answer
       socket.on("webrtc-answer", async ({ answer }) => {
+        console.log("Received answer");
         await peer.setRemoteDescription(new RTCSessionDescription(answer));
+        await drainIceCandidateQueue();
       });
 
+      // FIX: queue candidates if remoteDescription isn't ready yet
       socket.on("webrtc-ice-candidate", async ({ candidate }) => {
-        try {
-          await peer.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          console.error(err);
+        if (peer.remoteDescription) {
+          try {
+            await peer.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (err) {
+            console.error("Error adding ICE candidate:", err);
+          }
+        } else {
+          console.log("Queuing ICE candidate (no remoteDescription yet)");
+          iceCandidateQueue.current.push(candidate);
         }
       });
 
+      // FIX: server now sends this to the second player, who creates the offer
       socket.on("ready-for-call", async () => {
-  console.log("READY FOR CALL RECEIVED");
-  const offer = await peer.createOffer();
-  await peer.setLocalDescription(offer);
-  socket.emit("webrtc-offer", { roomId, offer });
-});
-
-
+        console.log("READY FOR CALL — creating offer");
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        socket.emit("webrtc-offer", { roomId, offer });
+      });
     }
 
     init();
 
-   return () => {
-  socket.off("webrtc-offer");
-  socket.off("webrtc-answer");
-  socket.off("webrtc-ice-candidate");
-  socket.off("ready-for-call");
-};
+    return () => {
+      socket.off("webrtc-offer");
+      socket.off("webrtc-answer");
+      socket.off("webrtc-ice-candidate");
+      socket.off("ready-for-call");
+
+      // Clean up peer and stream on unmount
+      peerRef.current?.close();
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
   }, [roomId]);
 
   return (
