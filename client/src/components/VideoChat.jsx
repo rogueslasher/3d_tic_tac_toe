@@ -47,14 +47,9 @@ export default function VideoChat({ roomId }) {
 
       localVideoRef.current.srcObject = localStreamRef.current;
 
-      const peer = new RTCPeerConnection({
+const peer = new RTCPeerConnection({
   iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    {
-      urls: "turn:your-turn-server.com:3478",
-      username: "user",
-      credential: "pass"
-    }
+    { urls: "stun:stun.l.google.com:19302" }
   ]
 });
 peer.oniceconnectionstatechange = () => {
@@ -119,7 +114,7 @@ peer.oniceconnectionstatechange = () => {
       socket.off("webrtc-offer");
       socket.off("webrtc-answer");
       socket.off("webrtc-ice-candidate");
-      socket.off("start-call");
+      
     };
   }, [roomId]);
 

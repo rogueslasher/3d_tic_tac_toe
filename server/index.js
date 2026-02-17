@@ -77,8 +77,10 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("state-update", room);
 
       if (room.players.length === 2) {
-  io.to(roomId).emit("ready-for-call");
+  const firstPlayer = room.players[0];
+  io.to(firstPlayer).emit("ready-for-call");
 }
+
 
 
 
