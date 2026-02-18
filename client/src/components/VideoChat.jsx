@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import socket from "../network/socket";
-console.log("VIDEO BUILD VERSION 5");
+console.log("VIDEO BUILD VERSION 6 - DEBUG");
 
 export default function VideoChat({ roomId }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerRef = useRef(null);
+  const iceCandidateQueue = useRef([]);
+  const readyForCallReceived = useRef(false);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const localStreamRef = useRef(null);
-  const iceCandidateQueue = useRef([]);
-
-  // FIX: track if ready-for-call arrived before init() finished
-  const readyForCallReceived = useRef(false);
 
   const toggleMute = () => {
     const audioTrack = localStreamRef.current
@@ -36,40 +34,63 @@ export default function VideoChat({ roomId }) {
   };
 
   useEffect(() => {
-    // FIX: register ready-for-call BEFORE init() so we never miss it
+    console.log("[WRtC] useEffect running, roomId:", roomId);
+    console.log("[WEBRTC] socket connected?", socket.connected, "id:", socket.id);
+
+    // Register BEFORE init so we never miss it
     socket.on("ready-for-call", () => {
-      console.log("READY FOR CALL RECEIVED");
+      console.log("[WEBRTC] ✅ ready-for-call received! peerRef:", !!peerRef.current);
       readyForCallReceived.current = true;
-      // if peer is already set up, create offer immediately
       if (peerRef.current) {
+        console.log("[WEBRTC] peer already exists, creating offer now");
         createOffer(peerRef.current);
+      } else {
+        console.log("[WEBRTC] peer not ready yet, will create offer after init");
       }
-      // otherwise createOffer will be called at the end of init()
+    });
+
+    // Log ALL incoming socket events for debugging
+    socket.onAny((event, ...args) => {
+      console.log("[WEBRTC] socket event received:", event, args);
     });
 
     async function createOffer(peer) {
-      console.log("Creating offer...");
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      socket.emit("webrtc-offer", { roomId, offer });
+      console.log("[WEBRTC] createOffer called");
+      try {
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        console.log("[WEBRTC] offer created, emitting webrtc-offer");
+        socket.emit("webrtc-offer", { roomId, offer });
+      } catch (err) {
+        console.error("[WEBRTC] createOffer error:", err);
+      }
     }
 
     async function drainIceCandidateQueue(peer) {
+      console.log("[WEBRTC] draining ICE queue, size:", iceCandidateQueue.current.length);
       while (iceCandidateQueue.current.length > 0) {
         const candidate = iceCandidateQueue.current.shift();
         try {
           await peer.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (err) {
-          console.error("Error adding queued ICE candidate:", err);
+          console.error("[WEBRTC] queued ICE error:", err);
         }
       }
     }
 
     async function init() {
-      localStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      console.log("[WEBRTC] init() started");
+
+      try {
+        localStreamRef.current = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        console.log("[WEBRTC] getUserMedia success");
+      } catch (err) {
+        console.error("[WEBRTC] getUserMedia FAILED:", err);
+        return;
+      }
 
       localVideoRef.current.srcObject = localStreamRef.current;
 
@@ -77,12 +98,15 @@ export default function VideoChat({ roomId }) {
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
       peerRef.current = peer;
+      console.log("[WEBRTC] RTCPeerConnection created");
 
       localStreamRef.current.getTracks().forEach((track) => {
         peer.addTrack(track, localStreamRef.current);
+        console.log("[WEBRTC] added track:", track.kind);
       });
 
       peer.ontrack = (event) => {
+        console.log("[WEBRTC] ✅ ontrack fired! streams:", event.streams.length);
         if (remoteVideoRef.current.srcObject !== event.streams[0]) {
           remoteVideoRef.current.srcObject = event.streams[0];
         }
@@ -90,48 +114,63 @@ export default function VideoChat({ roomId }) {
 
       peer.onicecandidate = (event) => {
         if (event.candidate) {
-          socket.emit("webrtc-ice-candidate", {
-            roomId,
-            candidate: event.candidate,
-          });
+          console.log("[WEBRTC] sending ICE candidate");
+          socket.emit("webrtc-ice-candidate", { roomId, candidate: event.candidate });
+        } else {
+          console.log("[WEBRTC] ICE gathering complete");
         }
       };
 
       peer.oniceconnectionstatechange = () => {
-        console.log("ICE STATE:", peer.iceConnectionState);
+        console.log("[WEBRTC] ICE state:", peer.iceConnectionState);
+      };
+
+      peer.onsignalingstatechange = () => {
+        console.log("[WEBRTC] signaling state:", peer.signalingState);
       };
 
       socket.on("webrtc-offer", async ({ offer }) => {
-        console.log("Received offer, creating answer");
-        await peer.setRemoteDescription(new RTCSessionDescription(offer));
-        await drainIceCandidateQueue(peer);
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        socket.emit("webrtc-answer", { roomId, answer });
+        console.log("[WEBRTC] received offer, creating answer");
+        try {
+          await peer.setRemoteDescription(new RTCSessionDescription(offer));
+          await drainIceCandidateQueue(peer);
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          console.log("[WEBRTC] answer created, emitting");
+          socket.emit("webrtc-answer", { roomId, answer });
+        } catch (err) {
+          console.error("[WEBRTC] answer error:", err);
+        }
       });
 
       socket.on("webrtc-answer", async ({ answer }) => {
-        console.log("Received answer");
-        await peer.setRemoteDescription(new RTCSessionDescription(answer));
-        await drainIceCandidateQueue(peer);
+        console.log("[WEBRTC] received answer");
+        try {
+          await peer.setRemoteDescription(new RTCSessionDescription(answer));
+          await drainIceCandidateQueue(peer);
+        } catch (err) {
+          console.error("[WEBRTC] setRemoteDescription (answer) error:", err);
+        }
       });
 
       socket.on("webrtc-ice-candidate", async ({ candidate }) => {
+        console.log("[WEBRTC] received ICE candidate, remoteDesc ready?", !!peer.remoteDescription);
         if (peer.remoteDescription) {
           try {
             await peer.addIceCandidate(new RTCIceCandidate(candidate));
           } catch (err) {
-            console.error("Error adding ICE candidate:", err);
+            console.error("[WEBRTC] addIceCandidate error:", err);
           }
         } else {
-          console.log("Queuing ICE candidate");
           iceCandidateQueue.current.push(candidate);
         }
       });
 
-      // FIX: if ready-for-call already arrived before init() finished, create offer now
+      console.log("[WEBRTC] init() done. readyForCallReceived:", readyForCallReceived.current);
+
+      // If ready-for-call arrived before init finished, create offer now
       if (readyForCallReceived.current) {
-        console.log("ready-for-call was already received, creating offer now");
+        console.log("[WEBRTC] creating offer (was waiting for init)");
         await createOffer(peer);
       }
     }
@@ -139,10 +178,12 @@ export default function VideoChat({ roomId }) {
     init();
 
     return () => {
+      console.log("[WEBRTC] cleanup");
       socket.off("ready-for-call");
       socket.off("webrtc-offer");
       socket.off("webrtc-answer");
       socket.off("webrtc-ice-candidate");
+      socket.offAny();
       peerRef.current?.close();
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
@@ -150,7 +191,6 @@ export default function VideoChat({ roomId }) {
 
   return (
     <>
-      {/* Remote Video */}
       <video
         ref={remoteVideoRef}
         autoPlay
@@ -164,8 +204,6 @@ export default function VideoChat({ roomId }) {
           objectFit: "cover",
         }}
       />
-
-      {/* Local Video Overlay */}
       <video
         ref={localVideoRef}
         autoPlay
@@ -181,8 +219,6 @@ export default function VideoChat({ roomId }) {
           objectFit: "cover",
         }}
       />
-
-      {/* Controls */}
       <div
         style={{
           position: "absolute",
@@ -207,7 +243,6 @@ export default function VideoChat({ roomId }) {
         >
           🎤
         </button>
-
         <button
           onClick={toggleCamera}
           style={{
