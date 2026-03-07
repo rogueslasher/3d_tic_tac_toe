@@ -57,10 +57,14 @@ export default function VideoChat({ roomId }) {
       }
 
       peer.ontrack = (event) => {
-        console.log(`[MESH] Track received from ${targetId}`);
+        console.log(`[MESH] Track received from ${targetId}, kind:`, event.track.kind);
         setRemoteStreams(prev => {
-          const removed = prev.filter(s => s.id !== targetId);
-          return [...removed, { id: targetId, stream: event.streams[0] }];
+          // If the stream is already in the array, do nothing
+          if (prev.find(s => s.id === targetId)) {
+            return prev;
+          }
+          // Otherwise append the new stream
+          return [...prev, { id: targetId, stream: event.streams[0] }];
         });
       };
 
