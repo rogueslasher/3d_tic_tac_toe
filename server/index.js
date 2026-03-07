@@ -81,20 +81,20 @@ io.on("connection", (socket) => {
     const iceServers = await fetchTurnCredentials();
     callback({ iceServers });
   });
-  socket.on("webrtc-offer", ({ roomId, offer }) => {
-    socket.to(roomId).emit("webrtc-offer", { offer });
+  socket.on("webrtc-offer", ({ targetId, offer }) => {
+    io.to(targetId).emit("webrtc-offer", { senderId: socket.id, offer });
   });
 
-  socket.on("webrtc-answer", ({ roomId, answer }) => {
-    socket.to(roomId).emit("webrtc-answer", { answer });
+  socket.on("webrtc-answer", ({ targetId, answer }) => {
+    io.to(targetId).emit("webrtc-answer", { senderId: socket.id, answer });
   });
 
-  socket.on("webrtc-ice-candidate", ({ roomId, candidate }) => {
-    socket.to(roomId).emit("webrtc-ice-candidate", { candidate });
+  socket.on("webrtc-ice-candidate", ({ targetId, candidate }) => {
+    io.to(targetId).emit("webrtc-ice-candidate", { senderId: socket.id, candidate });
   });
 
 
-  socket.on("join-room", ({ roomId }) => {
+  socket.on("join-room", ({ roomId, asSpectator }) => {
     socket.join(roomId);
 
     if (!rooms[roomId]) {
@@ -102,34 +102,44 @@ io.on("connection", (socket) => {
         board: Array(27).fill(null),
         playerTurn: "X",
         players: [],
+        spectators: [],
         winner: null,
       };
     }
 
     const room = rooms[roomId];
 
-    if (!room.players.includes(socket.id)) {
-      if (room.players.length < 2) {
+    if (!room.players.includes(socket.id) && (!room.spectators || !room.spectators.includes(socket.id))) {
+      room.spectators = room.spectators || [];
+      if (!asSpectator && room.players.length < 2) {
         room.players.push(socket.id);
+      } else if (asSpectator) {
+        room.spectators.push(socket.id);
       } else {
-        return; // Room is full
+        socket.emit("room-full");
+        return; // Room is full, prompt client
       }
     }
 
-    console.log("ROOM PLAYERS:", room.players);
+    console.log("ROOM PLAYERS:", room.players, "SPECTATORS:", room.spectators || []);
 
     const playerIndex = room.players.indexOf(socket.id);
-    const symbol = playerIndex === 0 ? "X" : "O";
+    let role = "spectator";
+    if (playerIndex === 0) role = "X";
+    if (playerIndex === 1) role = "O";
 
-    console.log("Assigning", symbol, "to", socket.id);
+    console.log("Assigning", role, "to", socket.id);
 
-    socket.emit("player-assigned", symbol);
+    socket.emit("player-assigned", role);
     io.to(roomId).emit("state-update", room);
 
-    if (room.players.length === 2 && playerIndex === 1) {
-      socket.emit("ready-for-call");
-      console.log("Emitted ready-for-call to second player:", socket.id);
-    }
+    const otherUsers = [...room.players, ...(room.spectators || [])].filter((id) => id !== socket.id);
+
+    // Send list of existing users to the new user
+    socket.emit("all-users", otherUsers);
+
+    // Notify other users that someone new joined
+    socket.to(roomId).emit("user-joined", socket.id);
   });
 
   socket.on("make-move", ({ roomId, index }) => {
@@ -173,8 +183,12 @@ io.on("connection", (socket) => {
     for (const roomId in rooms) {
       const room = rooms[roomId];
       room.players = room.players.filter(id => id !== socket.id);
+      if (room.spectators) {
+        room.spectators = room.spectators.filter(id => id !== socket.id);
+      }
+      socket.to(roomId).emit("user-disconnected", socket.id);
 
-      if (room.players.length === 0) {
+      if (room.players.length === 0 && (!room.spectators || room.spectators.length === 0)) {
         delete rooms[roomId];
       }
     }
