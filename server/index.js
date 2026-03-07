@@ -108,29 +108,27 @@ io.on("connection", (socket) => {
 
     const room = rooms[roomId];
 
-    if (!room.players.includes(socket.id) && room.players.length < 2) {
-      room.players.push(socket.id);
-
-      console.log("ROOM PLAYERS:", room.players);
-
-      const symbol = room.players.length === 1 ? "X" : "O";
-
-      console.log("Assigning", symbol, "to", socket.id);
-
-      socket.emit("player-assigned", symbol);
-      io.to(roomId).emit("state-update", room);
-
-      // FIX: removed stray `peer` references that don't exist server-side —
-      // those lines were crashing the handler before ready-for-call could fire.
-
-      if (room.players.length === 2) {
-        // FIX: emit to the *second* player (the one who just joined).
-        // Player[0] is already waiting; player[1] is guaranteed to have its
-        // WebRTC listeners initialised by the time this arrives because they
-        // just finished their own init() call.
-        socket.emit("ready-for-call");
-        console.log("Emitted ready-for-call to second player:", socket.id);
+    if (!room.players.includes(socket.id)) {
+      if (room.players.length < 2) {
+        room.players.push(socket.id);
+      } else {
+        return; // Room is full
       }
+    }
+
+    console.log("ROOM PLAYERS:", room.players);
+
+    const playerIndex = room.players.indexOf(socket.id);
+    const symbol = playerIndex === 0 ? "X" : "O";
+
+    console.log("Assigning", symbol, "to", socket.id);
+
+    socket.emit("player-assigned", symbol);
+    io.to(roomId).emit("state-update", room);
+
+    if (room.players.length === 2 && playerIndex === 1) {
+      socket.emit("ready-for-call");
+      console.log("Emitted ready-for-call to second player:", socket.id);
     }
   });
 
