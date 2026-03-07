@@ -1,6 +1,47 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import socket from "../network/socket";
-console.log("VIDEO BUILD VERSION 6 - DEBUG");
+console.log("VIDEO BUILD VERSION 7 - TURN + RETRY");
+
+// ─── ICE server configuration ────────────────────────────────────────
+// Multiple STUN servers for redundancy + free Metered TURN servers
+// for NAT traversal across restrictive networks.
+const ICE_SERVERS = {
+  iceServers: [
+    // STUN servers (discover public IP)
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+
+    // Free TURN servers from Open Relay (relay.metered.ca)
+    // These relay traffic when direct peer-to-peer fails (symmetric NAT)
+    {
+      urls: "turn:a.relay.metered.ca:80",
+      username: "e8dd65b92f6bce636d5230c8",
+      credential: "JxOVkJpMqCNKl4Gp",
+    },
+    {
+      urls: "turn:a.relay.metered.ca:80?transport=tcp",
+      username: "e8dd65b92f6bce636d5230c8",
+      credential: "JxOVkJpMqCNKl4Gp",
+    },
+    {
+      urls: "turn:a.relay.metered.ca:443",
+      username: "e8dd65b92f6bce636d5230c8",
+      credential: "JxOVkJpMqCNKl4Gp",
+    },
+    {
+      urls: "turns:a.relay.metered.ca:443?transport=tcp",
+      username: "e8dd65b92f6bce636d5230c8",
+      credential: "JxOVkJpMqCNKl4Gp",
+    },
+  ],
+  iceCandidatePoolSize: 10,
+};
+
+const MAX_RETRIES = 2;
+const ICE_TIMEOUT_MS = 15000; // 15 seconds before retry
 
 export default function VideoChat({ roomId }) {
   const localVideoRef = useRef(null);
@@ -8,9 +49,12 @@ export default function VideoChat({ roomId }) {
   const peerRef = useRef(null);
   const iceCandidateQueue = useRef([]);
   const readyForCallReceived = useRef(false);
+  const retryCountRef = useRef(0);
+  const iceTimeoutRef = useRef(null);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState("waiting"); // waiting | connecting | connected | failed | retrying
   const localStreamRef = useRef(null);
 
   const toggleMute = () => {
@@ -33,14 +77,164 @@ export default function VideoChat({ roomId }) {
     }
   };
 
+  // ─── Clear any running ICE timeout ───────────────────────────────
+  const clearIceTimeout = useCallback(() => {
+    if (iceTimeoutRef.current) {
+      clearTimeout(iceTimeoutRef.current);
+      iceTimeoutRef.current = null;
+    }
+  }, []);
+
+  // ─── Start ICE timeout — retries if connection isn't made ────────
+  const startIceTimeout = useCallback(() => {
+    clearIceTimeout();
+    iceTimeoutRef.current = setTimeout(() => {
+      const peer = peerRef.current;
+      if (
+        peer &&
+        peer.iceConnectionState !== "connected" &&
+        peer.iceConnectionState !== "completed"
+      ) {
+        console.warn(
+          `[WEBRTC] ⏰ ICE timeout after ${ICE_TIMEOUT_MS}ms. State: ${peer.iceConnectionState}. Retry ${retryCountRef.current + 1}/${MAX_RETRIES}`
+        );
+
+        if (retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current += 1;
+          setConnectionStatus("retrying");
+          // Close old peer and re-negotiate
+          peer.close();
+          peerRef.current = null;
+          iceCandidateQueue.current = [];
+          // Re-trigger the connection by creating a new peer
+          setupPeer(localStreamRef.current);
+        } else {
+          console.error("[WEBRTC] ❌ All retries exhausted");
+          setConnectionStatus("failed");
+        }
+      }
+    }, ICE_TIMEOUT_MS);
+  }, [clearIceTimeout]);
+
+  // ─── Create and configure a new RTCPeerConnection ────────────────
+  const setupPeer = useCallback(
+    (localStream) => {
+      console.log("[WEBRTC] setupPeer() called, attempt:", retryCountRef.current);
+
+      const peer = new RTCPeerConnection(ICE_SERVERS);
+      peerRef.current = peer;
+      console.log("[WEBRTC] RTCPeerConnection created with TURN servers");
+
+      // Add local tracks
+      localStream.getTracks().forEach((track) => {
+        peer.addTrack(track, localStream);
+        console.log("[WEBRTC] added track:", track.kind);
+      });
+
+      // ── Remote track received ──
+      peer.ontrack = (event) => {
+        console.log("[WEBRTC] ✅ ontrack fired! streams:", event.streams.length);
+        if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== event.streams[0]) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      // ── Send ICE candidates to remote peer ──
+      peer.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log(
+            "[WEBRTC] sending ICE candidate, type:",
+            event.candidate.type,
+            "protocol:",
+            event.candidate.protocol
+          );
+          socket.emit("webrtc-ice-candidate", {
+            roomId,
+            candidate: event.candidate,
+          });
+        } else {
+          console.log("[WEBRTC] ICE gathering complete");
+        }
+      };
+
+      // ── ICE connection state (connected / failed / disconnected) ──
+      peer.oniceconnectionstatechange = () => {
+        const state = peer.iceConnectionState;
+        console.log("[WEBRTC] ICE connection state:", state);
+
+        switch (state) {
+          case "checking":
+            setConnectionStatus("connecting");
+            startIceTimeout();
+            break;
+          case "connected":
+          case "completed":
+            setConnectionStatus("connected");
+            clearIceTimeout();
+            retryCountRef.current = 0; // reset for future reconnects
+            break;
+          case "failed":
+            console.error("[WEBRTC] ❌ ICE connection failed");
+            if (retryCountRef.current < MAX_RETRIES) {
+              retryCountRef.current += 1;
+              setConnectionStatus("retrying");
+              clearIceTimeout();
+              peer.close();
+              peerRef.current = null;
+              iceCandidateQueue.current = [];
+              setupPeer(localStream);
+            } else {
+              setConnectionStatus("failed");
+              clearIceTimeout();
+            }
+            break;
+          case "disconnected":
+            console.warn("[WEBRTC] ⚠️ ICE disconnected — may recover automatically");
+            setConnectionStatus("connecting");
+            startIceTimeout(); // give it time to recover, then retry
+            break;
+          case "closed":
+            clearIceTimeout();
+            break;
+          default:
+            break;
+        }
+      };
+
+      // ── ICE gathering state (for debugging) ──
+      peer.onicegatheringstatechange = () => {
+        console.log("[WEBRTC] ICE gathering state:", peer.iceGatheringState);
+      };
+
+      peer.onsignalingstatechange = () => {
+        console.log("[WEBRTC] signaling state:", peer.signalingState);
+      };
+
+      // ── Connection state (overall) ──
+      peer.onconnectionstatechange = () => {
+        console.log("[WEBRTC] connection state:", peer.connectionState);
+      };
+
+      // If ready-for-call already arrived, create offer immediately
+      if (readyForCallReceived.current) {
+        console.log("[WEBRTC] creating offer (ready-for-call was already received)");
+        createOffer(peer);
+      }
+
+      return peer;
+    },
+    [roomId, startIceTimeout, clearIceTimeout]
+  );
+
   useEffect(() => {
-    console.log("[WRtC] useEffect running, roomId:", roomId);
+    console.log("[WEBRTC] useEffect running, roomId:", roomId);
     console.log("[WEBRTC] socket connected?", socket.connected, "id:", socket.id);
 
     // Register BEFORE init so we never miss it
     socket.on("ready-for-call", () => {
       console.log("[WEBRTC] ✅ ready-for-call received! peerRef:", !!peerRef.current);
       readyForCallReceived.current = true;
+      setConnectionStatus("connecting");
       if (peerRef.current) {
         console.log("[WEBRTC] peer already exists, creating offer now");
         createOffer(peerRef.current);
@@ -89,53 +283,28 @@ export default function VideoChat({ roomId }) {
         console.log("[WEBRTC] getUserMedia success");
       } catch (err) {
         console.error("[WEBRTC] getUserMedia FAILED:", err);
+        setConnectionStatus("failed");
         return;
       }
 
-      localVideoRef.current.srcObject = localStreamRef.current;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
 
-      const peer = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      });
-      peerRef.current = peer;
-      console.log("[WEBRTC] RTCPeerConnection created");
+      // Set up the peer connection with TURN servers
+      const peer = setupPeer(localStreamRef.current);
 
-      localStreamRef.current.getTracks().forEach((track) => {
-        peer.addTrack(track, localStreamRef.current);
-        console.log("[WEBRTC] added track:", track.kind);
-      });
-
-      peer.ontrack = (event) => {
-        console.log("[WEBRTC] ✅ ontrack fired! streams:", event.streams.length);
-        if (remoteVideoRef.current.srcObject !== event.streams[0]) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
-
-      peer.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log("[WEBRTC] sending ICE candidate");
-          socket.emit("webrtc-ice-candidate", { roomId, candidate: event.candidate });
-        } else {
-          console.log("[WEBRTC] ICE gathering complete");
-        }
-      };
-
-      peer.oniceconnectionstatechange = () => {
-        console.log("[WEBRTC] ICE state:", peer.iceConnectionState);
-      };
-
-      peer.onsignalingstatechange = () => {
-        console.log("[WEBRTC] signaling state:", peer.signalingState);
-      };
-
+      // ── Handle incoming signaling messages ──
       socket.on("webrtc-offer", async ({ offer }) => {
         console.log("[WEBRTC] received offer, creating answer");
+        setConnectionStatus("connecting");
         try {
-          await peer.setRemoteDescription(new RTCSessionDescription(offer));
-          await drainIceCandidateQueue(peer);
-          const answer = await peer.createAnswer();
-          await peer.setLocalDescription(answer);
+          const currentPeer = peerRef.current;
+          if (!currentPeer) return;
+          await currentPeer.setRemoteDescription(new RTCSessionDescription(offer));
+          await drainIceCandidateQueue(currentPeer);
+          const answer = await currentPeer.createAnswer();
+          await currentPeer.setLocalDescription(answer);
           console.log("[WEBRTC] answer created, emitting");
           socket.emit("webrtc-answer", { roomId, answer });
         } catch (err) {
@@ -146,18 +315,25 @@ export default function VideoChat({ roomId }) {
       socket.on("webrtc-answer", async ({ answer }) => {
         console.log("[WEBRTC] received answer");
         try {
-          await peer.setRemoteDescription(new RTCSessionDescription(answer));
-          await drainIceCandidateQueue(peer);
+          const currentPeer = peerRef.current;
+          if (!currentPeer) return;
+          await currentPeer.setRemoteDescription(new RTCSessionDescription(answer));
+          await drainIceCandidateQueue(currentPeer);
         } catch (err) {
           console.error("[WEBRTC] setRemoteDescription (answer) error:", err);
         }
       });
 
       socket.on("webrtc-ice-candidate", async ({ candidate }) => {
-        console.log("[WEBRTC] received ICE candidate, remoteDesc ready?", !!peer.remoteDescription);
-        if (peer.remoteDescription) {
+        const currentPeer = peerRef.current;
+        if (!currentPeer) return;
+        console.log(
+          "[WEBRTC] received ICE candidate, remoteDesc ready?",
+          !!currentPeer.remoteDescription
+        );
+        if (currentPeer.remoteDescription) {
           try {
-            await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            await currentPeer.addIceCandidate(new RTCIceCandidate(candidate));
           } catch (err) {
             console.error("[WEBRTC] addIceCandidate error:", err);
           }
@@ -167,18 +343,13 @@ export default function VideoChat({ roomId }) {
       });
 
       console.log("[WEBRTC] init() done. readyForCallReceived:", readyForCallReceived.current);
-
-      // If ready-for-call arrived before init finished, create offer now
-      if (readyForCallReceived.current) {
-        console.log("[WEBRTC] creating offer (was waiting for init)");
-        await createOffer(peer);
-      }
     }
 
     init();
 
     return () => {
       console.log("[WEBRTC] cleanup");
+      clearIceTimeout();
       socket.off("ready-for-call");
       socket.off("webrtc-offer");
       socket.off("webrtc-answer");
@@ -187,10 +358,41 @@ export default function VideoChat({ roomId }) {
       peerRef.current?.close();
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [roomId]);
+  }, [roomId, setupPeer, clearIceTimeout]);
+
+  // ─── Connection status label & color ─────────────────────────────
+  const statusConfig = {
+    waiting: { label: "Waiting for opponent…", color: "#888" },
+    connecting: { label: "Connecting…", color: "#f5a623" },
+    retrying: { label: "Retrying connection…", color: "#f5a623" },
+    connected: { label: "Connected ✅", color: "#4caf50" },
+    failed: { label: "Connection failed ❌", color: "#e53935" },
+  };
+  const { label: statusLabel, color: statusColor } =
+    statusConfig[connectionStatus] || statusConfig.waiting;
 
   return (
     <>
+      {/* ── Connection status indicator ── */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 245,
+          right: 20,
+          background: "rgba(0,0,0,0.7)",
+          color: statusColor,
+          padding: "4px 12px",
+          borderRadius: 12,
+          fontSize: 12,
+          fontWeight: 600,
+          fontFamily: "system-ui, sans-serif",
+          zIndex: 10,
+          transition: "color 0.3s ease",
+        }}
+      >
+        {statusLabel}
+      </div>
+
       <video
         ref={remoteVideoRef}
         autoPlay
@@ -202,6 +404,8 @@ export default function VideoChat({ roomId }) {
           width: 300,
           height: 220,
           objectFit: "cover",
+          borderRadius: 8,
+          background: "#111",
         }}
       />
       <video
@@ -217,6 +421,7 @@ export default function VideoChat({ roomId }) {
           height: 65,
           border: "none",
           objectFit: "cover",
+          borderRadius: 6,
         }}
       />
       <div
