@@ -90,6 +90,18 @@ export default function VideoChat({ roomId }) {
     }, ICE_TIMEOUT_MS);
   }, [clearIceTimeout]);
 
+  const createOffer = useCallback(async (peer) => {
+    console.log("[WEBRTC] createOffer called");
+    try {
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      console.log("[WEBRTC] offer created, emitting webrtc-offer");
+      socket.emit("webrtc-offer", { roomId, offer });
+    } catch (err) {
+      console.error("[WEBRTC] createOffer error:", err);
+    }
+  }, [roomId]);
+
   // ─── Create and configure a new RTCPeerConnection ────────────────
   const setupPeer = useCallback(
     (localStream, iceServers) => {
@@ -206,7 +218,7 @@ export default function VideoChat({ roomId }) {
 
       return peer;
     },
-    [roomId, startIceTimeout, clearIceTimeout]
+    [roomId, startIceTimeout, clearIceTimeout, createOffer]
   );
 
   useEffect(() => {
@@ -231,17 +243,7 @@ export default function VideoChat({ roomId }) {
       console.log("[WEBRTC] socket event received:", event, args);
     });
 
-    async function createOffer(peer) {
-      console.log("[WEBRTC] createOffer called");
-      try {
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        console.log("[WEBRTC] offer created, emitting webrtc-offer");
-        socket.emit("webrtc-offer", { roomId, offer });
-      } catch (err) {
-        console.error("[WEBRTC] createOffer error:", err);
-      }
-    }
+
 
     async function drainIceCandidateQueue(peer) {
       console.log("[WEBRTC] draining ICE queue, size:", iceCandidateQueue.current.length);
@@ -383,7 +385,7 @@ export default function VideoChat({ roomId }) {
       peerRef.current?.close();
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [roomId, setupPeer, clearIceTimeout]);
+  }, [roomId, setupPeer, clearIceTimeout, createOffer]);
 
   // ─── Connection status label & color ─────────────────────────────
   const statusConfig = {
