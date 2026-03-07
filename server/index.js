@@ -147,6 +147,11 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     const playerIndex = room.players.indexOf(socket.id);
+    if (playerIndex === -1) {
+      console.warn(`[SECURITY] Spectator ${socket.id} attempted to make a move.`);
+      return;
+    }
+
     const symbol = playerIndex === 0 ? "X" : "O";
 
     if (room.winner) return;
@@ -169,6 +174,12 @@ io.on("connection", (socket) => {
   socket.on("reset-game", ({ roomId }) => {
     const room = rooms[roomId];
     if (!room) return;
+
+    // Reject if the user requesting a reset isn't a documented player
+    if (!room.players.includes(socket.id)) {
+      console.warn(`[SECURITY] Spectator ${socket.id} attempted to reset the game.`);
+      return;
+    }
 
     room.board = Array(27).fill(null);
     room.playerTurn = "X";

@@ -29,23 +29,43 @@ export default function GameUI({
       }}
     >
       <h4 style={{ marginBottom: "6px" }}>
-  Your Symbol: {playerSymbol || "Waiting..."}
-</h4>
+        Your Symbol: {playerSymbol || "Waiting..."}
+      </h4>
 
-<p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-  Room: {roomId}
-</p>
+      <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+        Room: {roomId}
+      </p>
 
-{!winnerInfo ? (
-  <h3>Turn: {player}</h3>
-) : (
-  <h3>Winner: {winnerInfo.winner} 🏆</h3>
-)}
+      {!winnerInfo ? (
+        <h3>Turn: {player}</h3>
+      ) : (
+        <h3>Winner: {winnerInfo.winner} 🏆</h3>
+      )}
+
+      {playerSymbol !== "spectator" && (
+        <button
+          onClick={resetGame}
+          style={{
+            marginTop: "10px",
+            padding: "6px 12px",
+            borderRadius: "6px",
+            border: "none",
+            cursor: "pointer",
+            width: "100%",
+          }}
+        >
+          Reset Game
+        </button>
+      )}
+
 
       <button
-        onClick={resetGame}
+        onClick={() => {
+          const newRoom = Math.random().toString(36).substring(2, 8);
+          window.location.href = `/?room=${newRoom}`;
+        }}
         style={{
-          marginTop: "10px",
+          marginTop: 6,
           padding: "6px 12px",
           borderRadius: "6px",
           border: "none",
@@ -53,26 +73,8 @@ export default function GameUI({
           width: "100%",
         }}
       >
-        Reset Game
+        Create New Room
       </button>
-
-
-      <button
-  onClick={() => {
-    const newRoom = Math.random().toString(36).substring(2, 8);
-    window.location.href = `/?room=${newRoom}`;
-  }}
-  style={{
-    marginTop: 6,
-    padding: "6px 12px",
-    borderRadius: "6px",
-    border: "none",
-    cursor: "pointer",
-    width: "100%",
-  }}
->
-  Create New Room
-</button>
 
 
       <div style={{ marginTop: "12px" }}>
@@ -93,12 +95,12 @@ export default function GameUI({
             >
               {Array.from({ length: 9 }).map((_, i) => {
                 const row = Math.floor(i / 3);
-const col = i % 3;
+                const col = i % 3;
 
-// 🔥 flip row so bottom row maps to y = 0 in 3D
-const flippedRow = 2 - row;
+                // 🔥 flip row so bottom row maps to y = 0 in 3D
+                const flippedRow = 2 - row;
 
-const index = layer * 9 + flippedRow * 3 + col;
+                const index = layer * 9 + flippedRow * 3 + col;
 
                 const value = board[index];
 
@@ -120,8 +122,8 @@ const index = layer * 9 + flippedRow * 3 + col;
                         value === "X"
                           ? "#42a5f5"
                           : value === "O"
-                          ? "#ef5350"
-                          : "#999",
+                            ? "#ef5350"
+                            : "#999",
                     }}
                   >
                     {value ?? ""}
