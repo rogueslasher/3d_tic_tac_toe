@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import  socket  from "../network/socket"; 
+import socket from "../network/socket";
 import GameUI from "./GameUI";
 import VideoChat from "./VideoChat";
 
@@ -10,68 +10,75 @@ export default function Game({ children }) {
   const [activeLayer, setActiveLayer] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
 
-const params = new URLSearchParams(window.location.search);
-const roomId = params.get("room") || "default";
+  const params = new URLSearchParams(window.location.search);
+  const roomId = params.get("room") || "default";
 
 
-useEffect(() => {
-  console.log("Game useEffect running");
+  useEffect(() => {
+    console.log("Game useEffect running");
 
-  // Attach listeners FIRST
-  socket.on("player-assigned", (symbol) => {
-    console.log("Assigned as:", symbol);
-    setPlayerSymbol(symbol);
-  });
+    // Attach listeners FIRST
+    socket.on("player-assigned", (symbol) => {
+      console.log("Assigned as:", symbol);
+      setPlayerSymbol(symbol);
+    });
 
-  socket.on("state-update", (state) => {
-    setBoard(state.board);
-    setPlayer(state.playerTurn);
-    setWinnerInfo(state.winner || null);
-  });
+    socket.on("state-update", (state) => {
+      setBoard(state.board);
+      setPlayer(state.playerTurn);
+      setWinnerInfo(state.winner || null);
+    });
 
-  // THEN emit join-room
-  console.log("Emitting join-room", roomId);
-  socket.emit("join-room", { roomId });
+    socket.on("room-full", () => {
+      const newRoomId = Math.random().toString(36).substring(2, 8);
+      alert("Room is full! Redirecting to a new room...");
+      window.location.href = `/?room=${newRoomId}`;
+    });
 
-  return () => {
-    socket.off("player-assigned");
-    socket.off("state-update");
+    // THEN emit join-room
+    console.log("Emitting join-room", roomId);
+    socket.emit("join-room", { roomId });
+
+    return () => {
+      socket.off("player-assigned");
+      socket.off("state-update");
+      socket.off("room-full");
+    };
+  }, [roomId]);
+
+
+
+  const handleMove = (index) => {
+    if (!playerSymbol) return; // not assigned yet
+    if (board[index] || winnerInfo) return;
+    if (player !== playerSymbol) return; // not your turn
+
+    socket.emit("make-move", {
+      roomId,
+      index,
+    }, []);
   };
-}, [roomId]);
-
-
-
- const handleMove = (index) => {
-  if (!playerSymbol) return; // not assigned yet
-  if (board[index] || winnerInfo) return;
-  if (player !== playerSymbol) return; // not your turn
-
-  socket.emit("make-move", {
-    roomId,
-    index,
-  },[]);
-};
 
 
   const resetGame = () => {
-  socket.emit("reset-game", { roomId });
-};
+    socket.emit("reset-game", { roomId });
+  };
 
 
   return (
     <>
       {/* UI — MUST RECEIVE setActiveLayer */}
-     <GameUI
-  player={player}
-  playerSymbol={playerSymbol}
-  winnerInfo={winnerInfo}
-  resetGame={resetGame}
-  setActiveLayer={setActiveLayer}
-  board={board}
-  handleMove={handleMove}
-  roomId={roomId}
-  
-/>
+      <GameUI
+        player={player}
+        playerSymbol={playerSymbol}
+        winnerInfo={winnerInfo}
+        resetGame={resetGame}
+        setActiveLayer={setActiveLayer}
+        board={board}
+        handleMove={handleMove}
+        roomId={roomId}
+
+      />
 
 
       {/* 3D scene */}
