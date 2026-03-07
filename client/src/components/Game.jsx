@@ -30,9 +30,14 @@ export default function Game({ children }) {
     });
 
     socket.on("room-full", () => {
-      const newRoomId = Math.random().toString(36).substring(2, 8);
-      alert("Room is full! Redirecting to a new room...");
-      window.location.href = `/?room=${newRoomId}`;
+      const wantsToSpectate = window.confirm("This room is already full (2 players). Would you like to join as a spectator?");
+      if (wantsToSpectate) {
+        socket.emit("join-room", { roomId, asSpectator: true });
+      } else {
+        const newRoomId = Math.random().toString(36).substring(2, 8);
+        alert("Redirecting to a new room...");
+        window.location.href = `/?room=${newRoomId}`;
+      }
     });
 
     // THEN emit join-room
