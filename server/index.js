@@ -24,6 +24,45 @@ export function checkWinner(board) {
 const app = express();
 app.use(cors());
 
+// ─── TURN credential fetching from Metered.ca ─────────────────────
+const METERED_API_KEY = process.env.METERED_API_KEY || "";
+
+async function fetchTurnCredentials() {
+  if (!METERED_API_KEY) {
+    console.warn("[TURN] No METERED_API_KEY set — falling back to STUN-only");
+    return [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
+    ];
+  }
+
+  try {
+    const resp = await fetch(
+      `https://tic-tac-toe.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`
+    );
+    if (!resp.ok) throw new Error(`Metered API returned ${resp.status}`);
+    const iceServers = await resp.json();
+    console.log("[TURN] Fetched", iceServers.length, "ICE servers from Metered");
+    return iceServers;
+  } catch (err) {
+    console.error("[TURN] Failed to fetch from Metered:", err.message);
+    // Fallback to STUN-only
+    return [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+    ];
+  }
+}
+
+// REST endpoint for fetching TURN credentials
+app.get("/api/turn-credentials", async (req, res) => {
+  const iceServers = await fetchTurnCredentials();
+  res.json({ iceServers });
+});
+
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
@@ -37,6 +76,11 @@ const rooms = {}; // roomId -> game state
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
+  // ── Provide fresh TURN credentials to the client ──
+  socket.on("get-turn-credentials", async (callback) => {
+    const iceServers = await fetchTurnCredentials();
+    callback({ iceServers });
+  });
   socket.on("webrtc-offer", ({ roomId, offer }) => {
     socket.to(roomId).emit("webrtc-offer", { offer });
   });

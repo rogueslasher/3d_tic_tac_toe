@@ -1,44 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import socket from "../network/socket";
-console.log("VIDEO BUILD VERSION 7 - TURN + RETRY");
+console.log("VIDEO BUILD VERSION 8 - DYNAMIC TURN");
 
-// ─── ICE server configuration ────────────────────────────────────────
-// Multiple STUN servers for redundancy + free Metered TURN servers
-// for NAT traversal across restrictive networks.
-const ICE_SERVERS = {
-  iceServers: [
-    // STUN servers (discover public IP)
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
-
-    // Free TURN servers from Open Relay (relay.metered.ca)
-    // These relay traffic when direct peer-to-peer fails (symmetric NAT)
-    {
-      urls: "turn:a.relay.metered.ca:80",
-      username: "e8dd65b92f6bce636d5230c8",
-      credential: "JxOVkJpMqCNKl4Gp",
-    },
-    {
-      urls: "turn:a.relay.metered.ca:80?transport=tcp",
-      username: "e8dd65b92f6bce636d5230c8",
-      credential: "JxOVkJpMqCNKl4Gp",
-    },
-    {
-      urls: "turn:a.relay.metered.ca:443",
-      username: "e8dd65b92f6bce636d5230c8",
-      credential: "JxOVkJpMqCNKl4Gp",
-    },
-    {
-      urls: "turns:a.relay.metered.ca:443?transport=tcp",
-      username: "e8dd65b92f6bce636d5230c8",
-      credential: "JxOVkJpMqCNKl4Gp",
-    },
-  ],
-  iceCandidatePoolSize: 10,
-};
+// ─── Fallback ICE config (STUN only — used if server has no API key) ─
+const FALLBACK_ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:19302" },
+];
 
 const MAX_RETRIES = 2;
 const ICE_TIMEOUT_MS = 15000; // 15 seconds before retry
@@ -51,6 +22,7 @@ export default function VideoChat({ roomId }) {
   const readyForCallReceived = useRef(false);
   const retryCountRef = useRef(0);
   const iceTimeoutRef = useRef(null);
+  const iceServersRef = useRef(FALLBACK_ICE_SERVERS);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
@@ -107,7 +79,7 @@ export default function VideoChat({ roomId }) {
           peerRef.current = null;
           iceCandidateQueue.current = [];
           // Re-trigger the connection by creating a new peer
-          setupPeer(localStreamRef.current);
+          setupPeer(localStreamRef.current, iceServersRef.current);
         } else {
           console.error("[WEBRTC] ❌ All retries exhausted");
           setConnectionStatus("failed");
@@ -118,12 +90,21 @@ export default function VideoChat({ roomId }) {
 
   // ─── Create and configure a new RTCPeerConnection ────────────────
   const setupPeer = useCallback(
-    (localStream) => {
+    (localStream, iceServers) => {
       console.log("[WEBRTC] setupPeer() called, attempt:", retryCountRef.current);
 
-      const peer = new RTCPeerConnection(ICE_SERVERS);
+      // Store for retries
+      if (iceServers) iceServersRef.current = iceServers;
+
+      const config = {
+        iceServers: iceServers || iceServersRef.current,
+        iceCandidatePoolSize: 10,
+      };
+      console.log("[WEBRTC] ICE servers config:", config.iceServers.length, "servers");
+
+      const peer = new RTCPeerConnection(config);
       peerRef.current = peer;
-      console.log("[WEBRTC] RTCPeerConnection created with TURN servers");
+      console.log("[WEBRTC] RTCPeerConnection created");
 
       // Add local tracks
       localStream.getTracks().forEach((track) => {
@@ -182,7 +163,7 @@ export default function VideoChat({ roomId }) {
               peer.close();
               peerRef.current = null;
               iceCandidateQueue.current = [];
-              setupPeer(localStream);
+              setupPeer(localStream, iceServersRef.current);
             } else {
               setConnectionStatus("failed");
               clearIceTimeout();
@@ -291,8 +272,29 @@ export default function VideoChat({ roomId }) {
         localVideoRef.current.srcObject = localStreamRef.current;
       }
 
-      // Set up the peer connection with TURN servers
-      const peer = setupPeer(localStreamRef.current);
+      // ── Fetch fresh TURN credentials from the server ──
+      let iceServers = FALLBACK_ICE_SERVERS;
+      try {
+        const result = await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error("timeout")), 5000);
+          socket.emit("get-turn-credentials", (data) => {
+            clearTimeout(timeout);
+            resolve(data);
+          });
+        });
+        if (result?.iceServers?.length) {
+          iceServers = result.iceServers;
+          console.log("[WEBRTC] ✅ Got", iceServers.length, "ICE servers from server");
+          // Check if we got TURN servers
+          const hasTurn = iceServers.some(s => s.urls?.includes("turn:") || s.urls?.includes("turns:"));
+          console.log("[WEBRTC] Has TURN servers:", hasTurn);
+        }
+      } catch (err) {
+        console.warn("[WEBRTC] Could not fetch TURN credentials:", err.message, "— using STUN only");
+      }
+
+      // Set up the peer connection with fetched ICE servers
+      const peer = setupPeer(localStreamRef.current, iceServers);
 
       // ── Handle incoming signaling messages ──
       socket.on("webrtc-offer", async ({ offer }) => {
