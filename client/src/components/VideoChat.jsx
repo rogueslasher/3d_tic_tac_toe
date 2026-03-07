@@ -18,6 +18,8 @@ export default function VideoChat({ roomId }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerRef = useRef(null);
+  const pendingOffer = useRef(null);
+  const pendingAnswer = useRef(null);
   const iceCandidateQueue = useRef([]);
   const readyForCallReceived = useRef(false);
   const retryCountRef = useRef(0);
@@ -253,6 +255,63 @@ export default function VideoChat({ roomId }) {
       }
     }
 
+    async function handleOffer(peer, offer) {
+      try {
+        await peer.setRemoteDescription(new RTCSessionDescription(offer));
+        await drainIceCandidateQueue(peer);
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        console.log("[WEBRTC] answer created, emitting webrtc-answer");
+        socket.emit("webrtc-answer", { roomId, answer });
+      } catch (err) {
+        console.error("[WEBRTC] answer error:", err);
+      }
+    }
+
+    async function handleAnswer(peer, answer) {
+      try {
+        await peer.setRemoteDescription(new RTCSessionDescription(answer));
+        await drainIceCandidateQueue(peer);
+      } catch (err) {
+        console.error("[WEBRTC] setRemoteDescription (answer) error:", err);
+      }
+    }
+
+    // Handle incoming signaling messages immediately (queued if peer not ready)
+    socket.on("webrtc-offer", async ({ offer }) => {
+      console.log("[WEBRTC] received offer");
+      setConnectionStatus("connecting");
+      if (peerRef.current) {
+        await handleOffer(peerRef.current, offer);
+      } else {
+        console.log("[WEBRTC] queuing offer (peer not ready)");
+        pendingOffer.current = offer;
+      }
+    });
+
+    socket.on("webrtc-answer", async ({ answer }) => {
+      console.log("[WEBRTC] received answer");
+      if (peerRef.current) {
+        await handleAnswer(peerRef.current, answer);
+      } else {
+        console.log("[WEBRTC] queuing answer (peer not ready)");
+        pendingAnswer.current = answer;
+      }
+    });
+
+    socket.on("webrtc-ice-candidate", async ({ candidate }) => {
+      const currentPeer = peerRef.current;
+      if (currentPeer && currentPeer.remoteDescription) {
+        try {
+          await currentPeer.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("[WEBRTC] addIceCandidate error:", err);
+        }
+      } else {
+        iceCandidateQueue.current.push(candidate);
+      }
+    });
+
     async function init() {
       console.log("[WEBRTC] init() started");
 
@@ -296,53 +355,17 @@ export default function VideoChat({ roomId }) {
       // Set up the peer connection with fetched ICE servers
       const peer = setupPeer(localStreamRef.current, iceServers);
 
-      // ── Handle incoming signaling messages ──
-      socket.on("webrtc-offer", async ({ offer }) => {
-        console.log("[WEBRTC] received offer, creating answer");
+      // Process queued signaling messages if they arrived during init
+      if (pendingOffer.current) {
+        console.log("[WEBRTC] processing queued offer");
         setConnectionStatus("connecting");
-        try {
-          const currentPeer = peerRef.current;
-          if (!currentPeer) return;
-          await currentPeer.setRemoteDescription(new RTCSessionDescription(offer));
-          await drainIceCandidateQueue(currentPeer);
-          const answer = await currentPeer.createAnswer();
-          await currentPeer.setLocalDescription(answer);
-          console.log("[WEBRTC] answer created, emitting");
-          socket.emit("webrtc-answer", { roomId, answer });
-        } catch (err) {
-          console.error("[WEBRTC] answer error:", err);
-        }
-      });
-
-      socket.on("webrtc-answer", async ({ answer }) => {
-        console.log("[WEBRTC] received answer");
-        try {
-          const currentPeer = peerRef.current;
-          if (!currentPeer) return;
-          await currentPeer.setRemoteDescription(new RTCSessionDescription(answer));
-          await drainIceCandidateQueue(currentPeer);
-        } catch (err) {
-          console.error("[WEBRTC] setRemoteDescription (answer) error:", err);
-        }
-      });
-
-      socket.on("webrtc-ice-candidate", async ({ candidate }) => {
-        const currentPeer = peerRef.current;
-        if (!currentPeer) return;
-        console.log(
-          "[WEBRTC] received ICE candidate, remoteDesc ready?",
-          !!currentPeer.remoteDescription
-        );
-        if (currentPeer.remoteDescription) {
-          try {
-            await currentPeer.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (err) {
-            console.error("[WEBRTC] addIceCandidate error:", err);
-          }
-        } else {
-          iceCandidateQueue.current.push(candidate);
-        }
-      });
+        await handleOffer(peer, pendingOffer.current);
+        pendingOffer.current = null;
+      } else if (pendingAnswer.current) {
+        console.log("[WEBRTC] processing queued answer");
+        await handleAnswer(peer, pendingAnswer.current);
+        pendingAnswer.current = null;
+      }
 
       console.log("[WEBRTC] init() done. readyForCallReceived:", readyForCallReceived.current);
     }
