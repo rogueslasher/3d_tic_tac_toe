@@ -78,14 +78,14 @@ function Cell({
   const materialRef = useRef();
 
   // Colors — Black / White / Beige palette
-  const COLOR_X = new THREE.Color("#e8d5a3");       // warm ivory/gold
-  const COLOR_O = new THREE.Color("#c9a08a");        // soft warm rose
+  const COLOR_X = new THREE.Color("#dcb965");       // rich gold
+  const COLOR_O = new THREE.Color("#8a9ab0");        // cool slate blue
   const COLOR_WIN = new THREE.Color("#f0d080");      // warm gold
   const COLOR_EMPTY = new THREE.Color("#2a2622");    // warm charcoal
   const COLOR_EMPTY_HOVER = new THREE.Color("#3d3830"); // lighter warm charcoal
   const COLOR_DIMMED = new THREE.Color("#1a1816");   // deep warm black
-  const COLOR_GHOST_X = new THREE.Color("#e8d5a3");  // ivory ghost
-  const COLOR_GHOST_O = new THREE.Color("#c9a08a");  // rose ghost
+  const COLOR_GHOST_X = new THREE.Color("#dcb965");  // gold ghost
+  const COLOR_GHOST_O = new THREE.Color("#8a9ab0");  // slate ghost
 
   // Show ghost preview for empty cells when it's your turn and you hover
   const showGhost = isEmpty && isHovered && isMyTurn && !isDimmed;
@@ -106,34 +106,34 @@ function Cell({
       targetColor = COLOR_DIMMED;
       targetEmissive = COLOR_DIMMED;
       targetEmissiveIntensity = 0;
-      targetOpacity = 0.2;
+      targetOpacity = 0.3;
     } else if (showGhost) {
       // Ghost preview
       targetColor = playerSymbol === "X" ? COLOR_GHOST_X : COLOR_GHOST_O;
       targetEmissive = targetColor;
       targetEmissiveIntensity = 0.15;
-      targetOpacity = 0.45;
+      targetOpacity = 0.7;
     } else if (value === "X") {
       targetColor = COLOR_X;
       targetEmissive = COLOR_X;
       targetEmissiveIntensity = 0.25;
-      targetOpacity = 0.92;
+      targetOpacity = 0.98;
     } else if (value === "O") {
       targetColor = COLOR_O;
       targetEmissive = COLOR_O;
       targetEmissiveIntensity = 0.25;
-      targetOpacity = 0.92;
+      targetOpacity = 0.98;
     } else if (isHovered) {
       targetColor = COLOR_EMPTY_HOVER;
       targetEmissive = COLOR_EMPTY_HOVER;
-      targetEmissiveIntensity = 0.05;
-      targetOpacity = 0.4;
+      targetEmissiveIntensity = 0.08;
+      targetOpacity = 0.8;
     } else {
-      // Empty — more visible now
+      // Empty — significantly more visible
       targetColor = COLOR_EMPTY;
       targetEmissive = COLOR_EMPTY;
-      targetEmissiveIntensity = 0.02;
-      targetOpacity = 0.35;
+      targetEmissiveIntensity = 0.05;
+      targetOpacity = 0.65;
     }
 
     // Smooth lerp transitions
@@ -175,11 +175,11 @@ function Cell({
       <boxGeometry args={[size, size, size]} />
       <meshStandardMaterial
         ref={materialRef}
-        color={isEmpty ? "#2a2622" : value === "X" ? "#e8d5a3" : "#c9a08a"}
-        emissive={isEmpty ? "#2a2622" : value === "X" ? "#e8d5a3" : "#c9a08a"}
-        emissiveIntensity={isEmpty ? 0.02 : 0.15}
+        color={isEmpty ? "#2a2622" : value === "X" ? "#dcb965" : "#8a9ab0"}
+        emissive={isEmpty ? "#2a2622" : value === "X" ? "#dcb965" : "#8a9ab0"}
+        emissiveIntensity={isEmpty ? 0.05 : 0.2}
         transparent
-        opacity={isEmpty ? 0.35 : 0.9}
+        opacity={isEmpty ? 0.65 : 0.98}
         roughness={0.4}
         metalness={0.05}
       />

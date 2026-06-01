@@ -13,15 +13,15 @@
   --text-secondary: rgba(245, 240, 232, 0.65);
   --text-muted: rgba(245, 240, 232, 0.35);
 
-  /* X = warm ivory/gold */
-  --accent-x: #e8d5a3;
-  --accent-x-dim: rgba(232, 213, 163, 0.15);
-  --accent-x-glow: rgba(232, 213, 163, 0.35);
+  /* X = rich gold */
+  --accent-x: #dcb965;
+  --accent-x-dim: rgba(220, 185, 101, 0.15);
+  --accent-x-glow: rgba(220, 185, 101, 0.35);
 
-  /* O = cool silver/slate */
-  --accent-o: #b0b8c8;
-  --accent-o-dim: rgba(176, 184, 200, 0.15);
-  --accent-o-glow: rgba(176, 184, 200, 0.35);
+  /* O = deeper cool slate/blue */
+  --accent-o: #8a9ab0;
+  --accent-o-dim: rgba(138, 154, 176, 0.15);
+  --accent-o-glow: rgba(138, 154, 176, 0.35);
 
   --accent-win: #f0d080;
   --accent-win-glow: rgba(240, 208, 128, 0.45);

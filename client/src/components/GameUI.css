@@ -8,6 +8,10 @@
   left: 20px;
   z-index: 10;
   width: 220px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 235, 220, 0.12) transparent;
   padding: 20px;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
@@ -43,13 +47,13 @@
 .hud__symbol-chip--x {
   background: var(--accent-x-dim);
   color: var(--accent-x);
-  border: 1px solid rgba(232, 213, 163, 0.25);
+  border: 1px solid rgba(220, 185, 101, 0.3);
 }
 
 .hud__symbol-chip--o {
   background: var(--accent-o-dim);
   color: var(--accent-o);
-  border: 1px solid rgba(201, 160, 138, 0.25);
+  border: 1px solid rgba(138, 154, 176, 0.3);
 }
 
 .hud__symbol-chip--spectator {
@@ -89,16 +93,16 @@
 }
 
 .hud__turn--your-turn {
-  background: var(--accent-x-dim);
+  background: rgba(220, 185, 101, 0.22);
   color: var(--accent-x);
-  border: 1px solid rgba(232, 213, 163, 0.2);
+  border: 1px solid rgba(220, 185, 101, 0.35);
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .hud__turn--your-turn.is-o {
-  background: var(--accent-o-dim);
+  background: rgba(138, 154, 176, 0.22);
   color: var(--accent-o);
-  border-color: rgba(201, 160, 138, 0.2);
+  border-color: rgba(138, 154, 176, 0.35);
 }
 
 .hud__turn--waiting {
@@ -254,13 +258,13 @@
 .hud__cell--x {
   color: var(--accent-x);
   background: var(--accent-x-dim);
-  border-color: rgba(232, 213, 163, 0.2);
+  border-color: rgba(220, 185, 101, 0.25);
 }
 
 .hud__cell--o {
   color: var(--accent-o);
   background: var(--accent-o-dim);
-  border-color: rgba(201, 160, 138, 0.2);
+  border-color: rgba(138, 154, 176, 0.25);
 }
 
 .hud__cell--win {
@@ -283,6 +287,7 @@
     padding: 14px;
     top: 12px;
     left: 12px;
+    max-height: calc(100vh - 24px);
   }
 
   .hud__layer-grid {
