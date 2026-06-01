@@ -17,6 +17,72 @@ export default function VideoChat({ roomId }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
 
+  // Drag and Drop Panel State & Handlers
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, posX: 0, posY: 0 });
+
+  const handleMouseMove = useCallback((e) => {
+    if (!dragRef.current.isDragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    setPosition({
+      x: dragRef.current.posX + dx,
+      y: dragRef.current.posY + dy,
+    });
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    dragRef.current.isDragging = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "default";
+  }, [handleMouseMove]);
+
+  const handleMouseDown = useCallback((e) => {
+    if (e.target.closest("button")) return;
+    dragRef.current.isDragging = true;
+    dragRef.current.startX = e.clientX;
+    dragRef.current.startY = e.clientY;
+    dragRef.current.posX = position.x;
+    dragRef.current.posY = position.y;
+    
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "grabbing";
+    e.preventDefault();
+  }, [position, handleMouseMove, handleMouseUp]);
+
+  const handleTouchMove = useCallback((e) => {
+    if (!dragRef.current.isDragging) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragRef.current.startX;
+    const dy = touch.clientY - dragRef.current.startY;
+    if (e.cancelable) e.preventDefault();
+    setPosition({
+      x: dragRef.current.posX + dx,
+      y: dragRef.current.posY + dy,
+    });
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    dragRef.current.isDragging = false;
+    document.removeEventListener("touchmove", handleTouchMove);
+    document.removeEventListener("touchend", handleTouchEnd);
+  }, [handleTouchMove]);
+
+  const handleTouchStart = useCallback((e) => {
+    if (e.target.closest("button")) return;
+    const touch = e.touches[0];
+    dragRef.current.isDragging = true;
+    dragRef.current.startX = touch.clientX;
+    dragRef.current.startY = touch.clientY;
+    dragRef.current.posX = position.x;
+    dragRef.current.posY = position.y;
+    
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd);
+  }, [position, handleTouchMove, handleTouchEnd]);
+
   // Mesh Network State
   const localStreamRef = useRef(null);
   const iceServersRef = useRef(FALLBACK_ICE_SERVERS);
@@ -353,79 +419,122 @@ export default function VideoChat({ roomId }) {
     };
   }, [getPeerObj, createOffer, removePeer]);
 
+  const hasRemote = remoteStreams.length > 0;
+
   return (
-    <>
-      {/* Status badge */}
-      <div className="video-chat__status" style={{ color: statusColor }}>
-        <span
-          className={`video-chat__status-dot${dotAnimated ? " video-chat__status-dot--animated" : ""}`}
-          style={{ backgroundColor: dotColor }}
-        />
-        {statusLabel}
-      </div>
+    <div
+      className="video-chat__panel"
+      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+    >
+      {/* Video Container (Main + PiP) */}
+      <div className="video-chat__video-container">
+        {/* Main Video (Remote if connected, Local if waiting) */}
+        {hasRemote ? (
+          <div className="video-chat__main-wrapper">
+            <video
+              ref={(el) => {
+                if (el && el.srcObject !== remoteStreams[0].stream) {
+                  el.srcObject = remoteStreams[0].stream;
+                }
+              }}
+              autoPlay
+              playsInline
+              className="video-chat__main-video"
+            />
+            <span className="video-chat__label">Opponent</span>
+          </div>
+        ) : (
+          <div className="video-chat__main-wrapper">
+            <video
+              ref={(el) => {
+                localVideoRef.current = el;
+                if (el && el.srcObject !== localStreamRef.current) {
+                  el.srcObject = localStreamRef.current;
+                }
+              }}
+              autoPlay
+              playsInline
+              muted
+              className="video-chat__main-video"
+            />
+            <span className="video-chat__label">You</span>
+          </div>
+        )}
 
-      {/* Remote videos */}
-      <div className="video-chat__remote-container">
-        {remoteStreams.map((rs, index) => {
-          const bottomOffset = 20 + index * 230;
-          return (
-            <div
-              key={rs.id}
-              className="video-chat__remote-card"
-              style={{ bottom: bottomOffset }}
-            >
-              <video
-                ref={(el) => {
-                  if (el && el.srcObject !== rs.stream) {
-                    el.srcObject = rs.stream;
-                  }
-                }}
-                autoPlay
-                playsInline
-                className="video-chat__remote-video"
-              />
-              <span className="video-chat__remote-label">Opponent</span>
-            </div>
-          );
-        })}
-      </div>
+        {/* PiP Video (Local video overlay if remote is connected) */}
+        {hasRemote && (
+          <div className="video-chat__pip-wrapper">
+            <video
+              ref={(el) => {
+                localVideoRef.current = el;
+                if (el && el.srcObject !== localStreamRef.current) {
+                  el.srcObject = localStreamRef.current;
+                }
+              }}
+              autoPlay
+              playsInline
+              muted
+              className="video-chat__pip-video"
+            />
+            <span className="video-chat__pip-label">You</span>
+          </div>
+        )}
 
-      {/* Local video (PiP) */}
-      <div className="video-chat__local-wrapper">
-        <video
-          ref={(el) => {
-            localVideoRef.current = el;
-            if (el && el.srcObject !== localStreamRef.current) {
-              el.srcObject = localStreamRef.current;
-            }
-          }}
-          autoPlay
-          playsInline
-          muted
-          className="video-chat__local-video"
-        />
-        <span className="video-chat__local-label">You</span>
-      </div>
+        {/* Status Overlay */}
+        <div className="video-chat__status-overlay" style={{ color: statusColor }}>
+          <span
+            className={`video-chat__status-dot${dotAnimated ? " video-chat__status-dot--animated" : ""}`}
+            style={{ backgroundColor: dotColor }}
+          />
+          <span>{statusLabel}</span>
+        </div>
 
-      {/* Controls */}
-      <div className="video-chat__controls">
-        <button
-          onClick={toggleMute}
-          className={`video-chat__ctrl-btn ${isMuted ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
-          data-tooltip={isMuted ? "Unmute" : "Mute"}
-          id="toggle-mute-btn"
-        >
-          {isMuted ? "🔇" : "🎤"}
-        </button>
-        <button
-          onClick={toggleCamera}
-          className={`video-chat__ctrl-btn ${isCameraOff ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
-          data-tooltip={isCameraOff ? "Enable Camera" : "Disable Camera"}
-          id="toggle-camera-btn"
-        >
-          {isCameraOff ? "📵" : "📷"}
-        </button>
+        {/* Controls Overlay */}
+        <div className="video-chat__controls-overlay">
+          <button
+            onClick={toggleMute}
+            className={`video-chat__ctrl-btn ${isMuted ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
+            data-tooltip={isMuted ? "Unmute" : "Mute"}
+            id="toggle-mute-btn"
+          >
+            {isMuted ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" x2="23" y1="1" y2="23" />
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                <path d="M17 11a7 7 0 0 1-14 0v-1M21 10v1a7 7 0 0 1-2.39 5.2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={toggleCamera}
+            className={`video-chat__ctrl-btn ${isCameraOff ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
+            data-tooltip={isCameraOff ? "Enable Camera" : "Disable Camera"}
+            id="toggle-camera-btn"
+          >
+            {isCameraOff ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m22 8-6 4 6 4V8Z" />
+                <rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
+                <line x1="2" x2="22" y1="2" y2="22" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m22 8-6 4 6 4V8Z" />
+                <rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
