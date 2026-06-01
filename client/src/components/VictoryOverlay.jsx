@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import "./VictoryOverlay.css";
 
 const CONFETTI_COLORS = [
-  "#00d4ff", "#ff3d9a", "#ffd700", "#4caf50",
-  "#a855f7", "#f97316", "#06b6d4", "#ec4899",
+  "#dcb965", "#8a9ab0", "#5fa879", "#b8a070",
+  "#f5f0e8", "#c9a08a", "#e8d5a3", "#7da87b",
 ];
 
 function ConfettiParticles({ count = 40 }) {

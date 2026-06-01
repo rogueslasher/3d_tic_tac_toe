@@ -13,10 +13,10 @@ function SpinningCube() {
     <mesh ref={ref}>
       <boxGeometry args={[1.8, 1.8, 1.8]} />
       <meshStandardMaterial
-        color="#1a1a3e"
+        color="#3d3830"
         wireframe
         transparent
-        opacity={0.25}
+        opacity={0.35}
       />
     </mesh>
   );
@@ -47,7 +47,7 @@ export default function LandingPage() {
       <div className="landing__bg-canvas">
         <Canvas camera={{ position: [3, 3, 3], fov: 45 }}>
           <ambientLight intensity={0.3} />
-          <directionalLight position={[5, 5, 5]} intensity={0.5} color="#4060ff" />
+          <directionalLight position={[5, 5, 5]} intensity={0.7} color="#dcb965" />
           <SpinningCube />
         </Canvas>
       </div>
