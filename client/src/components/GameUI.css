@@ -119,8 +119,8 @@
   font-weight: 800;
   font-size: 0.95rem;
   color: var(--accent-win);
-  background: rgba(240, 208, 128, 0.08);
-  border: 1px solid rgba(240, 208, 128, 0.2);
+  background: rgba(95, 168, 121, 0.08);
+  border: 1px solid rgba(95, 168, 121, 0.2);
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
 
@@ -269,8 +269,8 @@
 
 .hud__cell--win {
   color: var(--accent-win);
-  background: rgba(240, 208, 128, 0.1);
-  border-color: rgba(240, 208, 128, 0.3);
+  background: rgba(95, 168, 121, 0.1);
+  border-color: rgba(95, 168, 121, 0.3);
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
 

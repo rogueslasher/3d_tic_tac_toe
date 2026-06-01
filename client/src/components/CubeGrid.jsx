@@ -80,7 +80,7 @@ function Cell({
   // Colors — Black / White / Beige palette
   const COLOR_X = new THREE.Color("#dcb965");       // rich gold
   const COLOR_O = new THREE.Color("#8a9ab0");        // cool slate blue
-  const COLOR_WIN = new THREE.Color("#f0d080");      // warm gold
+  const COLOR_WIN = new THREE.Color("#5fa879");      // emerald green
   const COLOR_EMPTY = new THREE.Color("#2a2622");    // warm charcoal
   const COLOR_EMPTY_HOVER = new THREE.Color("#3d3830"); // lighter warm charcoal
   const COLOR_DIMMED = new THREE.Color("#1a1816");   // deep warm black

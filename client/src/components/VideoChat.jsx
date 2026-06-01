@@ -282,16 +282,41 @@ export default function VideoChat({ roomId }) {
     async function init() {
       console.log("[MESH] Initialization started");
 
+      let stream = null;
+      // Progressive fallback logic for getUserMedia
       try {
-        localStreamRef.current = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = localStreamRef.current;
-        }
       } catch (err) {
-        console.error("[MESH] getUserMedia FAILED:", err);
+        console.warn("[MESH] getUserMedia video+audio failed, trying audio-only:", err);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: true,
+          });
+        } catch (err2) {
+          console.warn("[MESH] getUserMedia audio-only failed, trying video-only:", err2);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          } catch (err3) {
+            console.error("[MESH] All getUserMedia fallbacks FAILED:", err3);
+          }
+        }
+      }
+
+      if (stream) {
+        localStreamRef.current = stream;
+        
+        // Sync control states with actual tracks obtained
+        const hasAudio = stream.getAudioTracks().length > 0;
+        const hasVideo = stream.getVideoTracks().length > 0;
+        setIsMuted(!hasAudio);
+        setIsCameraOff(!hasVideo);
       }
 
       try {
@@ -350,7 +375,11 @@ export default function VideoChat({ roomId }) {
               style={{ bottom: bottomOffset }}
             >
               <video
-                ref={(el) => { if (el) el.srcObject = rs.stream; }}
+                ref={(el) => {
+                  if (el && el.srcObject !== rs.stream) {
+                    el.srcObject = rs.stream;
+                  }
+                }}
                 autoPlay
                 playsInline
                 className="video-chat__remote-video"
@@ -364,7 +393,12 @@ export default function VideoChat({ roomId }) {
       {/* Local video (PiP) */}
       <div className="video-chat__local-wrapper">
         <video
-          ref={localVideoRef}
+          ref={(el) => {
+            localVideoRef.current = el;
+            if (el && el.srcObject !== localStreamRef.current) {
+              el.srcObject = localStreamRef.current;
+            }
+          }}
           autoPlay
           playsInline
           muted
