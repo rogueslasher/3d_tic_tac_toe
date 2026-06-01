@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import socket from "../network/socket";
 import GameUI from "./GameUI";
 import VideoChat from "./VideoChat";
-import VictoryOverlay from "./VictoryOverlay";
 
 export default function Game({ children }) {
   const [board, setBoard] = useState(Array(27).fill(null));
@@ -99,15 +98,6 @@ export default function Game({ children }) {
         activeLayer,
       })}
       <VideoChat roomId={roomId} />
-      <VictoryOverlay
-        winnerInfo={winnerInfo}
-        isDraw={winnerInfo?.winner === "Draw"}
-        onPlayAgain={resetGame}
-        onNewRoom={() => {
-          const newRoom = Math.random().toString(36).substring(2, 8);
-          window.location.href = `/?room=${newRoom}`;
-        }}
-      />
     </>
   );
 }

@@ -133,7 +133,12 @@ export default function GameUI({
       </div>
 
       {/* Action buttons */}
-      {!isSpectator && (
+      {!isSpectator && winnerInfo && (
+        <button className="hud__btn hud__btn--play-again" onClick={resetGame} id="play-again-btn">
+          ★ Play Again
+        </button>
+      )}
+      {!isSpectator && !winnerInfo && (
         <button className="hud__btn hud__btn--reset" onClick={resetGame} id="reset-btn">
           ↻ Reset Game
         </button>

@@ -190,6 +190,18 @@
   box-shadow: 0 0 12px var(--accent-x-dim);
 }
 
+.hud__btn--play-again {
+  background: var(--accent-win);
+  color: #121110;
+  border: 1px solid transparent;
+  box-shadow: 0 4px 14px rgba(95, 168, 121, 0.25);
+}
+
+.hud__btn--play-again:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(95, 168, 121, 0.4);
+}
+
 .hud__btn--new-room {
   background: transparent;
   color: var(--text-secondary);
