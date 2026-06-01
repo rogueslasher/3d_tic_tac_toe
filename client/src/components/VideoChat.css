@@ -16,7 +16,7 @@
   right: 20px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: #0a0a14;
+  background: #1a1814;
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-md);
   pointer-events: auto;
@@ -24,7 +24,7 @@
 }
 
 .video-chat__remote-card:hover {
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(245, 235, 220, 0.05);
 }
 
 .video-chat__remote-video {
@@ -60,7 +60,7 @@
   height: 75px;
   object-fit: cover;
   border-radius: var(--radius-md);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(245, 235, 220, 0.1);
   display: block;
   box-shadow: var(--shadow-sm);
 }
@@ -134,12 +134,12 @@
 }
 
 .video-chat__ctrl-btn--on {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(245, 235, 220, 0.1);
   color: white;
 }
 
 .video-chat__ctrl-btn--on:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(245, 235, 220, 0.18);
   transform: scale(1.08);
 }
 

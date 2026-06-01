@@ -3,37 +3,39 @@
    ══════════════════════════════════════════════ */
 
 :root {
-  /* ── Palette ── */
-  --bg-primary: #0a0a1a;
-  --bg-secondary: #12122a;
-  --bg-surface: rgba(255, 255, 255, 0.04);
-  --bg-surface-hover: rgba(255, 255, 255, 0.08);
+  /* ── Palette — Black / White / Beige ── */
+  --bg-primary: #1a1814;
+  --bg-secondary: #121110;
+  --bg-surface: rgba(245, 235, 220, 0.07);
+  --bg-surface-hover: rgba(245, 235, 220, 0.12);
 
-  --text-primary: #e8e8f0;
-  --text-secondary: rgba(232, 232, 240, 0.6);
-  --text-muted: rgba(232, 232, 240, 0.35);
+  --text-primary: #f5f0e8;
+  --text-secondary: rgba(245, 240, 232, 0.65);
+  --text-muted: rgba(245, 240, 232, 0.35);
 
-  --accent-x: #00d4ff;
-  --accent-x-dim: rgba(0, 212, 255, 0.15);
-  --accent-x-glow: rgba(0, 212, 255, 0.4);
+  /* X = warm ivory/gold */
+  --accent-x: #e8d5a3;
+  --accent-x-dim: rgba(232, 213, 163, 0.15);
+  --accent-x-glow: rgba(232, 213, 163, 0.35);
 
-  --accent-o: #ff3d9a;
-  --accent-o-dim: rgba(255, 61, 154, 0.15);
-  --accent-o-glow: rgba(255, 61, 154, 0.4);
+  /* O = soft warm rose */
+  --accent-o: #c9a08a;
+  --accent-o-dim: rgba(201, 160, 138, 0.15);
+  --accent-o-glow: rgba(201, 160, 138, 0.35);
 
-  --accent-win: #ffd700;
-  --accent-win-glow: rgba(255, 215, 0, 0.5);
+  --accent-win: #f0d080;
+  --accent-win-glow: rgba(240, 208, 128, 0.45);
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(245, 235, 220, 0.1);
+  --border-glow: rgba(245, 235, 220, 0.18);
 
-  --success: #4caf50;
-  --warning: #f5a623;
-  --danger: #e53935;
+  --success: #8fae6b;
+  --warning: #d4a857;
+  --danger: #c45a50;
 
-  /* ── Glass ── */
-  --glass-bg: rgba(15, 15, 35, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  /* ── Glass — more opaque, warm tint ── */
+  --glass-bg: rgba(22, 20, 18, 0.82);
+  --glass-border: rgba(245, 235, 220, 0.1);
   --glass-blur: 20px;
 
   /* ── Radii ── */
@@ -44,9 +46,9 @@
   --radius-full: 9999px;
 
   /* ── Shadows ── */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.6);
   --shadow-glow-x: 0 0 20px var(--accent-x-glow);
   --shadow-glow-o: 0 0 20px var(--accent-o-glow);
 
@@ -109,12 +111,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(245, 235, 220, 0.12);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(245, 235, 220, 0.22);
 }
 
 /* ── Links ── */

@@ -26,8 +26,8 @@
   inset: 0;
   z-index: 1;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(245, 235, 220, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 235, 220, 0.02) 1px, transparent 1px);
   background-size: 60px 60px;
   pointer-events: none;
 }
@@ -46,7 +46,7 @@
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg), 0 0 80px rgba(0, 212, 255, 0.06);
+  box-shadow: var(--shadow-lg), 0 0 80px rgba(232, 213, 163, 0.06);
   animation: scale-in var(--duration-slow) var(--ease-out) forwards;
   max-width: 440px;
   width: 90%;
@@ -126,14 +126,14 @@
 }
 
 .landing__btn--primary {
-  background: linear-gradient(135deg, var(--accent-x), #0099cc);
-  color: #000;
-  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+  background: linear-gradient(135deg, var(--accent-x), #b8a070);
+  color: #1a1814;
+  box-shadow: 0 4px 20px rgba(232, 213, 163, 0.25);
 }
 
 .landing__btn--primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 30px rgba(0, 212, 255, 0.45);
+  box-shadow: 0 6px 30px rgba(232, 213, 163, 0.4);
 }
 
 .landing__btn--primary:active {
@@ -153,7 +153,7 @@
 }
 
 .landing__btn--secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(245, 235, 220, 0.12);
   border-color: var(--accent-x);
 }
 
