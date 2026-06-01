@@ -18,10 +18,10 @@
   --accent-x-dim: rgba(232, 213, 163, 0.15);
   --accent-x-glow: rgba(232, 213, 163, 0.35);
 
-  /* O = soft warm rose */
-  --accent-o: #c9a08a;
-  --accent-o-dim: rgba(201, 160, 138, 0.15);
-  --accent-o-glow: rgba(201, 160, 138, 0.35);
+  /* O = cool silver/slate */
+  --accent-o: #b0b8c8;
+  --accent-o-dim: rgba(176, 184, 200, 0.15);
+  --accent-o-glow: rgba(176, 184, 200, 0.35);
 
   --accent-win: #f0d080;
   --accent-win-glow: rgba(240, 208, 128, 0.45);
