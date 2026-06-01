@@ -12,7 +12,7 @@ const FALLBACK_ICE_SERVERS = [
 const MAX_RETRIES = 2;
 const ICE_TIMEOUT_MS = 15000;
 
-export default function VideoChat({ roomId }) {
+export default function VideoChat({ roomId, playersList = [], playerSymbol }) {
   const localVideoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
@@ -421,101 +421,143 @@ export default function VideoChat({ roomId }) {
     };
   }, [getPeerObj, createOffer, removePeer]);
 
-  const participants = useMemo(() => {
-    const list = [];
+  const { mainStreams, spectatorStreams } = useMemo(() => {
+    const main = [];
+    const spec = [];
+
+    // 1. Categorize local stream
     if (localStream) {
-      list.push({ id: "local", stream: localStream, isLocal: true, label: "You" });
+      if (playerSymbol === "X" || playerSymbol === "O") {
+        main.push({ id: "local", stream: localStream, isLocal: true, label: "You" });
+      } else {
+        spec.push({ id: "local", stream: localStream, isLocal: true, label: "You (Spectator)" });
+      }
     }
-    remoteStreams.forEach((rs, index) => {
-      list.push({
-        id: rs.id,
-        stream: rs.stream,
-        isLocal: false,
-        label: index === 0 ? "Opponent" : `Spectator ${index}`
-      });
+
+    // 2. Categorize remote streams
+    remoteStreams.forEach((rs) => {
+      const isPlayer = playersList.includes(rs.id);
+      if (isPlayer) {
+        let label = "Opponent";
+        if (playerSymbol === "spectator" || !playerSymbol) {
+          const idx = playersList.indexOf(rs.id);
+          label = idx === 0 ? "Player X" : "Player O";
+        }
+        main.push({ id: rs.id, stream: rs.stream, isLocal: false, label });
+      } else {
+        // Find index among spectators
+        const specList = remoteStreams.filter(r => !playersList.includes(r.id));
+        const idx = specList.findIndex(r => r.id === rs.id);
+        spec.push({ id: rs.id, stream: rs.stream, isLocal: false, label: `Spectator ${idx + 1}` });
+      }
     });
-    return list;
-  }, [localStream, remoteStreams]);
+
+    return { mainStreams: main, spectatorStreams: spec };
+  }, [localStream, remoteStreams, playersList, playerSymbol]);
 
   return (
-    <div
-      className={`video-chat__panel count-${participants.length}`}
-      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-    >
-      {/* Video Container (Dynamic Grid) */}
-      <div className={`video-chat__video-container count-${participants.length}`}>
-        {participants.map((p) => (
-          <div key={p.id} className="video-chat__video-wrapper">
-            <video
-              ref={(el) => {
-                if (el && el.srcObject !== p.stream) {
-                  el.srcObject = p.stream;
-                }
-              }}
-              autoPlay
-              playsInline
-              muted={p.isLocal}
-              className="video-chat__video-element"
+    <>
+      <div
+        className={`video-chat__panel count-${mainStreams.length}`}
+        style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+      >
+        {/* Video Container (Dynamic Player Grid) */}
+        <div className={`video-chat__video-container count-${mainStreams.length}`}>
+          {mainStreams.map((p) => (
+            <div key={p.id} className="video-chat__video-wrapper">
+              <video
+                ref={(el) => {
+                  if (el && el.srcObject !== p.stream) {
+                    el.srcObject = p.stream;
+                  }
+                }}
+                autoPlay
+                playsInline
+                muted={p.isLocal}
+                className="video-chat__video-element"
+              />
+              <span className="video-chat__label">{p.label}</span>
+            </div>
+          ))}
+
+          {/* Status Overlay */}
+          <div className="video-chat__status-overlay" style={{ color: statusColor }}>
+            <span
+              className={`video-chat__status-dot${dotAnimated ? " video-chat__status-dot--animated" : ""}`}
+              style={{ backgroundColor: dotColor }}
             />
-            <span className="video-chat__label">{p.label}</span>
+            <span>{statusLabel}</span>
           </div>
-        ))}
 
-        {/* Status Overlay */}
-        <div className="video-chat__status-overlay" style={{ color: statusColor }}>
-          <span
-            className={`video-chat__status-dot${dotAnimated ? " video-chat__status-dot--animated" : ""}`}
-            style={{ backgroundColor: dotColor }}
-          />
-          <span>{statusLabel}</span>
-        </div>
-
-        {/* Controls Overlay */}
-        <div className="video-chat__controls-overlay">
-          <button
-            onClick={toggleMute}
-            className={`video-chat__ctrl-btn ${isMuted ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
-            data-tooltip={isMuted ? "Unmute" : "Mute"}
-            id="toggle-mute-btn"
-          >
-            {isMuted ? (
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="1" x2="23" y1="1" y2="23" />
-                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-                <path d="M17 11a7 7 0 0 1-14 0v-1M21 10v1a7 7 0 0 1-2.39 5.2" />
-                <line x1="12" x2="12" y1="19" y2="22" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-                <line x1="12" x2="12" y1="19" y2="22" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={toggleCamera}
-            className={`video-chat__ctrl-btn ${isCameraOff ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
-            data-tooltip={isCameraOff ? "Enable Camera" : "Disable Camera"}
-            id="toggle-camera-btn"
-          >
-            {isCameraOff ? (
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m22 8-6 4 6 4V8Z" />
-                <rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
-                <line x1="2" x2="22" y1="2" y2="22" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m22 8-6 4 6 4V8Z" />
-                <rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
-              </svg>
-            )}
-          </button>
+          {/* Controls Overlay */}
+          <div className="video-chat__controls-overlay">
+            <button
+              onClick={toggleMute}
+              className={`video-chat__ctrl-btn ${isMuted ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
+              data-tooltip={isMuted ? "Unmute" : "Mute"}
+              id="toggle-mute-btn"
+            >
+              {isMuted ? (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="1" x2="23" y1="1" y2="23" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                  <path d="M17 11a7 7 0 0 1-14 0v-1M21 10v1a7 7 0 0 1-2.39 5.2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={toggleCamera}
+              className={`video-chat__ctrl-btn ${isCameraOff ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
+              data-tooltip={isCameraOff ? "Enable Camera" : "Disable Camera"}
+              id="toggle-camera-btn"
+            >
+              {isCameraOff ? (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m22 8-6 4 6 4V8Z" />
+                  <rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
+                  <line x1="2" x2="22" y1="2" y2="22" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m22 8-6 4 6 4V8Z" />
+                  <rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Spectator Gallery (Top Right of screen, absolute positioned) */}
+      {spectatorStreams.length > 0 && (
+        <div className="video-chat__spectators-gallery">
+          {spectatorStreams.map((ss) => (
+            <div key={ss.id} className="video-chat__spectator-card">
+              <video
+                ref={(el) => {
+                  if (el && el.srcObject !== ss.stream) {
+                    el.srcObject = ss.stream;
+                  }
+                }}
+                autoPlay
+                playsInline
+                muted={ss.isLocal}
+                className="video-chat__spectator-video"
+              />
+              <span className="video-chat__spectator-label">{ss.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

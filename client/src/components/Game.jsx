@@ -11,6 +11,7 @@ export default function Game({ children }) {
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const [spectatorCount, setSpectatorCount] = useState(0);
+  const [playersList, setPlayersList] = useState([]);
 
   const params = new URLSearchParams(window.location.search);
   const roomId = params.get("room") || "default";
@@ -31,6 +32,7 @@ export default function Game({ children }) {
       setWinnerInfo(state.winner || null);
       setScores(state.scores || { X: 0, O: 0, draws: 0 });
       setSpectatorCount(state.spectators ? state.spectators.length : 0);
+      setPlayersList(state.players || []);
     });
 
     socket.on("room-full", () => {
@@ -97,7 +99,7 @@ export default function Game({ children }) {
         winnerInfo,
         activeLayer,
       })}
-      <VideoChat roomId={roomId} />
+      <VideoChat roomId={roomId} playersList={playersList} playerSymbol={playerSymbol} />
     </>
   );
 }
