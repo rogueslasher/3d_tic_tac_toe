@@ -1,0 +1,191 @@
+/* ══════════════════════════════════════════════
+   Video Chat
+   ══════════════════════════════════════════════ */
+
+.video-chat__remote-container {
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ── Remote video card ── */
+.video-chat__remote-card {
+  position: absolute;
+  right: 20px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #0a0a14;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  transition: box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.video-chat__remote-card:hover {
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.video-chat__remote-video {
+  width: 280px;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.video-chat__remote-label {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(4px);
+}
+
+/* ── Local video (PiP) ── */
+.video-chat__local-wrapper {
+  position: absolute;
+  bottom: 50px;
+  right: 24px;
+  z-index: 20;
+}
+
+.video-chat__local-video {
+  width: 100px;
+  height: 75px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  display: block;
+  box-shadow: var(--shadow-sm);
+}
+
+.video-chat__local-label {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+/* ── Status badge ── */
+.video-chat__status {
+  position: absolute;
+  bottom: 232px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: all var(--duration-normal) var(--ease-out);
+  animation: fade-in var(--duration-slow) var(--ease-out) forwards;
+}
+
+.video-chat__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.video-chat__status-dot--animated {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* ── Controls ── */
+.video-chat__controls {
+  position: absolute;
+  bottom: 12px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 30;
+}
+
+.video-chat__ctrl-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  border: 1px solid var(--glass-border);
+  position: relative;
+}
+
+.video-chat__ctrl-btn--on {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.video-chat__ctrl-btn--on:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.08);
+}
+
+.video-chat__ctrl-btn--off {
+  background: var(--danger);
+  color: white;
+  border-color: transparent;
+}
+
+.video-chat__ctrl-btn--off:hover {
+  background: #c62828;
+  transform: scale(1.08);
+}
+
+/* Tooltip */
+.video-chat__ctrl-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--text-primary);
+  font-size: 0.6rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.video-chat__ctrl-btn:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .video-chat__remote-video {
+    width: 200px;
+    height: 150px;
+  }
+
+  .video-chat__local-video {
+    width: 80px;
+    height: 60px;
+  }
+}

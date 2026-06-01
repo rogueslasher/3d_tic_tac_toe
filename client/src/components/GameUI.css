@@ -1,0 +1,297 @@
+/* ══════════════════════════════════════════════
+   Game HUD
+   ══════════════════════════════════════════════ */
+
+.hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  width: 220px;
+  padding: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: fade-in var(--duration-slow) var(--ease-out) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Player badge ── */
+.hud__player-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud__symbol-chip {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.hud__symbol-chip--x {
+  background: var(--accent-x-dim);
+  color: var(--accent-x);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+}
+
+.hud__symbol-chip--o {
+  background: var(--accent-o-dim);
+  color: var(--accent-o);
+  border: 1px solid rgba(255, 61, 154, 0.25);
+}
+
+.hud__symbol-chip--spectator {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+.hud__player-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud__player-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.hud__player-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── Turn indicator ── */
+.hud__turn {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.hud__turn--your-turn {
+  background: var(--accent-x-dim);
+  color: var(--accent-x);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.hud__turn--your-turn.is-o {
+  background: var(--accent-o-dim);
+  color: var(--accent-o);
+  border-color: rgba(255, 61, 154, 0.2);
+}
+
+.hud__turn--waiting {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ── Winner banner ── */
+.hud__winner {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--accent-win);
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* ── Room code ── */
+.hud__room {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.hud__room:hover {
+  background: var(--bg-surface-hover);
+}
+
+.hud__room-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.hud__room-code {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.hud__room-copy {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.hud__room:hover .hud__room-copy {
+  color: var(--accent-x);
+}
+
+/* ── Buttons ── */
+.hud__btn {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out);
+  text-align: center;
+}
+
+.hud__btn--reset {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.hud__btn--reset:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-x);
+  box-shadow: 0 0 12px var(--accent-x-dim);
+}
+
+.hud__btn--new-room {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.hud__btn--new-room:hover {
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+}
+
+/* ── Mini boards ── */
+.hud__miniboards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hud__miniboards-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.hud__layer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud__layer-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.hud__layer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 26px);
+  gap: 3px;
+}
+
+.hud__cell {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.hud__cell:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-glow);
+}
+
+.hud__cell--x {
+  color: var(--accent-x);
+  background: var(--accent-x-dim);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.hud__cell--o {
+  color: var(--accent-o);
+  background: var(--accent-o-dim);
+  border-color: rgba(255, 61, 154, 0.2);
+}
+
+.hud__cell--win {
+  color: var(--accent-win);
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.3);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* ── Divider ── */
+.hud__divider {
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .hud {
+    width: 180px;
+    padding: 14px;
+    top: 12px;
+    left: 12px;
+  }
+
+  .hud__layer-grid {
+    grid-template-columns: repeat(3, 22px);
+  }
+
+  .hud__cell {
+    width: 22px;
+    height: 22px;
+    font-size: 0.6rem;
+  }
+}

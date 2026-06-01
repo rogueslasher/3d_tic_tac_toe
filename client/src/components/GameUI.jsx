@@ -1,3 +1,6 @@
+import { useState } from "react";
+import "./GameUI.css";
+
 export default function GameUI({
   player,
   playerSymbol,
@@ -9,122 +12,132 @@ export default function GameUI({
   roomId
 }) {
 
-  // 🛡 Guard against undefined board during render
+  const [copied, setCopied] = useState(false);
+
+  // Guard against undefined board during render
   if (!board || board.length !== 27) {
     return null;
   }
 
+  const isYourTurn = player === playerSymbol;
+  const isSpectator = playerSymbol === "spectator";
+
+  const copyRoomCode = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback — just ignore
+    }
+  };
+
+  const getSymbolChipClass = () => {
+    if (isSpectator) return "hud__symbol-chip hud__symbol-chip--spectator";
+    if (playerSymbol === "X") return "hud__symbol-chip hud__symbol-chip--x";
+    if (playerSymbol === "O") return "hud__symbol-chip hud__symbol-chip--o";
+    return "hud__symbol-chip";
+  };
+
+  const getTurnClass = () => {
+    if (winnerInfo) return "";
+    if (!playerSymbol || isSpectator) return "hud__turn hud__turn--waiting";
+    if (isYourTurn) return `hud__turn hud__turn--your-turn${playerSymbol === "O" ? " is-o" : ""}`;
+    return "hud__turn hud__turn--waiting";
+  };
+
+  const getTurnText = () => {
+    if (!playerSymbol) return "Connecting…";
+    if (isSpectator) return `Spectating — ${player}'s turn`;
+    if (isYourTurn) return "Your Turn";
+    return "Opponent's Turn";
+  };
+
+  const getCellClass = (value, index) => {
+    const isWin = winnerInfo?.line?.includes(index);
+    if (isWin) return "hud__cell hud__cell--win";
+    if (value === "X") return "hud__cell hud__cell--x";
+    if (value === "O") return "hud__cell hud__cell--o";
+    return "hud__cell";
+  };
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 20,
-        left: 20,
-        zIndex: 10,
-        background: "rgba(0,0,0,0.6)",
-        padding: "12px 16px",
-        borderRadius: "8px",
-        color: "white",
-        fontFamily: "sans-serif",
-      }}
-    >
-      <h4 style={{ marginBottom: "6px" }}>
-        Your Symbol: {playerSymbol || "Waiting..."}
-      </h4>
+    <div className="hud" id="game-hud">
+      {/* Player badge */}
+      <div className="hud__player-badge">
+        <div className={getSymbolChipClass()}>
+          {isSpectator ? "👁" : (playerSymbol || "?")}
+        </div>
+        <div className="hud__player-info">
+          <span className="hud__player-label">You are</span>
+          <span className="hud__player-name">
+            {isSpectator ? "Spectator" : playerSymbol ? `Player ${playerSymbol}` : "Waiting…"}
+          </span>
+        </div>
+      </div>
 
-      <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-        Room: {roomId}
-      </p>
+      <div className="hud__divider" />
 
-      {!winnerInfo ? (
-        <h3>Turn: {player}</h3>
+      {/* Turn / Winner */}
+      {winnerInfo ? (
+        <div className="hud__winner">
+          🏆 {winnerInfo.winner} Wins!
+        </div>
       ) : (
-        <h3>Winner: {winnerInfo.winner} 🏆</h3>
+        <div className={getTurnClass()}>
+          {getTurnText()}
+        </div>
       )}
 
-      {playerSymbol !== "spectator" && (
-        <button
-          onClick={resetGame}
-          style={{
-            marginTop: "10px",
-            padding: "6px 12px",
-            borderRadius: "6px",
-            border: "none",
-            cursor: "pointer",
-            width: "100%",
-          }}
-        >
-          Reset Game
+      {/* Room code */}
+      <div className="hud__room" onClick={copyRoomCode} title="Click to copy room link">
+        <div>
+          <div className="hud__room-label">Room</div>
+          <div className="hud__room-code">{roomId}</div>
+        </div>
+        <span className="hud__room-copy">
+          {copied ? "✓ Copied" : "📋 Copy"}
+        </span>
+      </div>
+
+      {/* Action buttons */}
+      {!isSpectator && (
+        <button className="hud__btn hud__btn--reset" onClick={resetGame} id="reset-btn">
+          ↻ Reset Game
         </button>
       )}
-
-
       <button
+        className="hud__btn hud__btn--new-room"
         onClick={() => {
           const newRoom = Math.random().toString(36).substring(2, 8);
           window.location.href = `/?room=${newRoom}`;
         }}
-        style={{
-          marginTop: 6,
-          padding: "6px 12px",
-          borderRadius: "6px",
-          border: "none",
-          cursor: "pointer",
-          width: "100%",
-        }}
+        id="new-room-btn"
       >
-        Create New Room
+        + New Room
       </button>
 
+      <div className="hud__divider" />
 
-      <div style={{ marginTop: "12px" }}>
-        <p style={{ marginBottom: "6px" }}>Mini Boards</p>
-
+      {/* Mini boards */}
+      <div className="hud__miniboards">
+        <div className="hud__miniboards-title">Board Layers</div>
         {[0, 1, 2].map((layer) => (
-          <div key={layer} style={{ marginBottom: "10px" }}>
-            <p style={{ fontSize: "12px", marginBottom: "4px" }}>
-              Layer {layer + 1}
-            </p>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 24px)",
-                gap: "4px",
-              }}
-            >
+          <div key={layer} className="hud__layer">
+            <span className="hud__layer-label">Layer {layer + 1}</span>
+            <div className="hud__layer-grid">
               {Array.from({ length: 9 }).map((_, i) => {
                 const row = Math.floor(i / 3);
                 const col = i % 3;
-
-                // 🔥 flip row so bottom row maps to y = 0 in 3D
                 const flippedRow = 2 - row;
-
                 const index = layer * 9 + flippedRow * 3 + col;
-
                 const value = board[index];
 
                 return (
                   <div
                     key={i}
+                    className={getCellClass(value, index)}
                     onClick={() => handleMove(index)}
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      cursor: "pointer",
-                      background: "#222",
-                      border: "1px solid #555",
-                      color:
-                        value === "X"
-                          ? "#42a5f5"
-                          : value === "O"
-                            ? "#ef5350"
-                            : "#999",
-                    }}
                   >
                     {value ?? ""}
                   </div>

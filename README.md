@@ -196,8 +196,3 @@ Open two browser tabs to `http://localhost:5173`, join the same room, and you're
 
 ---
 
-## Author
-
-**Aniket Pandey** — [github.com/rogueslasher](https://github.com/rogueslasher)
-
-If you found this interesting, a ⭐ on the repo is always appreciated.

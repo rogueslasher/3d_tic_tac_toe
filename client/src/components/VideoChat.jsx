@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import socket from "../network/socket";
+import "./VideoChat.css";
 
 // ─── Fallback ICE config (STUN only) ─
 const FALLBACK_ICE_SERVERS = [
@@ -28,13 +29,13 @@ export default function VideoChat({ roomId }) {
   const [remoteStreams, setRemoteStreams] = useState([]);
   const [peerStatuses, setPeerStatuses] = useState({});
 
-  // --- UI STATUS CALCULATION ---
+  // --- UI STATUS ---
   const statusConfig = {
-    waiting: { label: "Waiting for opponent…", color: "#888" },
-    connecting: { label: "Connecting…", color: "#f5a623" },
-    retrying: { label: "Retrying connection…", color: "#f5a623" },
-    connected: { label: "Connected ✅", color: "#4caf50" },
-    failed: { label: "Connection failed ❌", color: "#e53935" },
+    waiting: { label: "Waiting for opponent…", color: "var(--text-muted)", dotColor: "#888", animated: false },
+    connecting: { label: "Connecting…", color: "var(--warning)", dotColor: "#f5a623", animated: true },
+    retrying: { label: "Retrying…", color: "var(--warning)", dotColor: "#f5a623", animated: true },
+    connected: { label: "Connected", color: "var(--success)", dotColor: "#4caf50", animated: false },
+    failed: { label: "Failed", color: "var(--danger)", dotColor: "#e53935", animated: false },
   };
 
   const overallStatus = useMemo(() => {
@@ -46,7 +47,7 @@ export default function VideoChat({ roomId }) {
     return "connected";
   }, [peerStatuses]);
 
-  const { label: statusLabel, color: statusColor } = statusConfig[overallStatus];
+  const { label: statusLabel, color: statusColor, dotColor, animated: dotAnimated } = statusConfig[overallStatus];
 
   const toggleMute = () => {
     const audioTrack = localStreamRef.current?.getTracks().find(t => t.kind === "audio");
@@ -132,7 +133,6 @@ export default function VideoChat({ roomId }) {
 
           removePeer(targetId);
           setTimeout(() => {
-            // Re-create the offer after a brief delay
             if (socket.id > targetId) {
               createOfferRef.current(targetId);
             }
@@ -223,7 +223,7 @@ export default function VideoChat({ roomId }) {
           users.forEach(userId => createOffer(userId));
         } else if (type === "user-joined") {
           const userId = data;
-          getPeerObj(userId); // Warm up peer object
+          getPeerObj(userId);
         } else if (type === "webrtc-offer") {
           const { senderId, offer } = data;
           const peerObj = getPeerObj(senderId);
@@ -328,115 +328,68 @@ export default function VideoChat({ roomId }) {
     };
   }, [getPeerObj, createOffer, removePeer]);
 
-  const renderRemoteVideos = () => {
-    return remoteStreams.map((rs, index) => {
-      const bottomOffset = 20 + (index * 240);
-      return (
-        <video
-          key={rs.id}
-          ref={(el) => { if (el) el.srcObject = rs.stream; }}
-          autoPlay
-          playsInline
-          style={{
-            position: "absolute",
-            bottom: bottomOffset,
-            right: 20,
-            width: 300,
-            height: 220,
-            objectFit: "cover",
-            borderRadius: 8,
-            background: "#111",
-            border: "2px solid #555",
-            pointerEvents: "auto"
-          }}
-        />
-      );
-    });
-  };
-
   return (
     <>
-      <div
-        style={{
-          position: "absolute",
-          bottom: 245,
-          right: 20,
-          background: "rgba(0,0,0,0.7)",
-          color: statusColor,
-          padding: "4px 12px",
-          borderRadius: 12,
-          fontSize: 12,
-          fontWeight: 600,
-          fontFamily: "system-ui, sans-serif",
-          zIndex: 10,
-          transition: "color 0.3s ease",
-        }}
-      >
+      {/* Status badge */}
+      <div className="video-chat__status" style={{ color: statusColor }}>
+        <span
+          className={`video-chat__status-dot${dotAnimated ? " video-chat__status-dot--animated" : ""}`}
+          style={{ backgroundColor: dotColor }}
+        />
         {statusLabel}
       </div>
 
-      <div style={{ position: "absolute", zIndex: 10, width: "100%", height: "100%", pointerEvents: "none" }}>
-        {renderRemoteVideos()}
+      {/* Remote videos */}
+      <div className="video-chat__remote-container">
+        {remoteStreams.map((rs, index) => {
+          const bottomOffset = 20 + index * 230;
+          return (
+            <div
+              key={rs.id}
+              className="video-chat__remote-card"
+              style={{ bottom: bottomOffset }}
+            >
+              <video
+                ref={(el) => { if (el) el.srcObject = rs.stream; }}
+                autoPlay
+                playsInline
+                className="video-chat__remote-video"
+              />
+              <span className="video-chat__remote-label">Opponent</span>
+            </div>
+          );
+        })}
       </div>
 
-      <video
-        ref={localVideoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{
-          position: "absolute",
-          bottom: 30,
-          right: 30,
-          width: 90,
-          height: 65,
-          border: "none",
-          objectFit: "cover",
-          borderRadius: 6,
-          zIndex: 20,
-          pointerEvents: "auto"
-        }}
-      />
+      {/* Local video (PiP) */}
+      <div className="video-chat__local-wrapper">
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="video-chat__local-video"
+        />
+        <span className="video-chat__local-label">You</span>
+      </div>
 
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          right: 20,
-          display: "flex",
-          gap: 8,
-          zIndex: 30
-        }}
-      >
+      {/* Controls */}
+      <div className="video-chat__controls">
         <button
           onClick={toggleMute}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            border: "none",
-            background: isMuted ? "#e53935" : "rgba(255,255,255,0.25)",
-            color: "white",
-            cursor: "pointer",
-            fontSize: 12,
-          }}
+          className={`video-chat__ctrl-btn ${isMuted ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
+          data-tooltip={isMuted ? "Unmute" : "Mute"}
+          id="toggle-mute-btn"
         >
-          🎤
+          {isMuted ? "🔇" : "🎤"}
         </button>
         <button
           onClick={toggleCamera}
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: "50%",
-            border: "none",
-            background: isCameraOff ? "#e53935" : "rgba(255,255,255,0.25)",
-            color: "white",
-            cursor: "pointer",
-            fontSize: 12,
-          }}
+          className={`video-chat__ctrl-btn ${isCameraOff ? "video-chat__ctrl-btn--off" : "video-chat__ctrl-btn--on"}`}
+          data-tooltip={isCameraOff ? "Enable Camera" : "Disable Camera"}
+          id="toggle-camera-btn"
         >
-          📷
+          {isCameraOff ? "📵" : "📷"}
         </button>
       </div>
     </>
