@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════
-   Video Chat Drag & Drop Panel
+   Video Chat Drag & Drop Panel (Grid Layout)
    ══════════════════════════════════════════════ */
 
 .video-chat__panel {
@@ -7,7 +7,6 @@
   bottom: 20px;
   right: 20px;
   z-index: 100;
-  width: 260px;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -18,29 +17,68 @@
   cursor: grab;
   user-select: none;
   touch-action: none;
-  transition: box-shadow var(--duration-fast) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: width var(--duration-normal) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .video-chat__panel:active {
   cursor: grabbing;
 }
 
+/* Responsive Panel Width based on participant count */
+.video-chat__panel.count-0,
+.video-chat__panel.count-1,
+.video-chat__panel.count-2 {
+  width: 240px;
+}
+
+.video-chat__panel.count-3,
+.video-chat__panel.count-4 {
+  width: 380px;
+}
+
 .video-chat__video-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #121110;
+  display: grid;
+  gap: 6px;
 }
 
-.video-chat__main-wrapper {
+/* Grid layout matching standard grid layouts */
+.video-chat__video-container.count-0,
+.video-chat__video-container.count-1 {
+  grid-template-columns: 1fr;
+  aspect-ratio: 4 / 3;
+}
+
+.video-chat__video-container.count-2 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  aspect-ratio: 3 / 4; /* Stacked vertical view makes both X & O large */
+}
+
+.video-chat__video-container.count-3,
+.video-chat__video-container.count-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  aspect-ratio: 4 / 3; /* 2x2 grid fits 4:3 videos perfectly */
+}
+
+.video-chat__video-wrapper {
+  position: relative;
   width: 100%;
   height: 100%;
-  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #1a1816;
 }
 
-.video-chat__main-video {
+.video-chat__video-element {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -59,41 +97,7 @@
   border-radius: var(--radius-sm);
   backdrop-filter: blur(4px);
   pointer-events: none;
-}
-
-/* ── PiP (Picture in Picture) Video ── */
-.video-chat__pip-wrapper {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 76px;
-  aspect-ratio: 4 / 3;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1.5px solid var(--glass-border);
-  box-shadow: var(--shadow-sm);
   z-index: 2;
-  background: #121110;
-}
-
-.video-chat__pip-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.video-chat__pip-label {
-  position: absolute;
-  bottom: 2px;
-  left: 4px;
-  font-size: 0.5rem;
-  font-weight: 600;
-  color: #f5f0e8;
-  background: rgba(18, 17, 16, 0.6);
-  padding: 1px 4px;
-  border-radius: 2px;
-  pointer-events: none;
 }
 
 /* ── Status Overlay ── */
@@ -101,7 +105,7 @@
   position: absolute;
   top: 8px;
   left: 8px;
-  z-index: 3;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -132,7 +136,7 @@
   right: 8px;
   display: flex;
   gap: 6px;
-  z-index: 3;
+  z-index: 10;
 }
 
 .video-chat__ctrl-btn {
@@ -195,12 +199,13 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .video-chat__panel {
-    width: 200px;
-    bottom: 12px;
-    right: 12px;
+  .video-chat__panel.count-0,
+  .video-chat__panel.count-1,
+  .video-chat__panel.count-2 {
+    width: 180px;
   }
-  .video-chat__pip-wrapper {
-    width: 60px;
+  .video-chat__panel.count-3,
+  .video-chat__panel.count-4 {
+    width: 280px;
   }
 }

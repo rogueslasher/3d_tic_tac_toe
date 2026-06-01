@@ -16,6 +16,7 @@ export default function VideoChat({ roomId }) {
   const localVideoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
 
   // Drag and Drop Panel State & Handlers
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -377,6 +378,7 @@ export default function VideoChat({ roomId }) {
 
       if (stream) {
         localStreamRef.current = stream;
+        setLocalStream(stream);
         
         // Sync control states with actual tracks obtained
         const hasAudio = stream.getAudioTracks().length > 0;
@@ -419,68 +421,47 @@ export default function VideoChat({ roomId }) {
     };
   }, [getPeerObj, createOffer, removePeer]);
 
-  const hasRemote = remoteStreams.length > 0;
+  const participants = useMemo(() => {
+    const list = [];
+    if (localStream) {
+      list.push({ id: "local", stream: localStream, isLocal: true, label: "You" });
+    }
+    remoteStreams.forEach((rs, index) => {
+      list.push({
+        id: rs.id,
+        stream: rs.stream,
+        isLocal: false,
+        label: index === 0 ? "Opponent" : `Spectator ${index}`
+      });
+    });
+    return list;
+  }, [localStream, remoteStreams]);
 
   return (
     <div
-      className="video-chat__panel"
+      className={`video-chat__panel count-${participants.length}`}
       style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      {/* Video Container (Main + PiP) */}
-      <div className="video-chat__video-container">
-        {/* Main Video (Remote if connected, Local if waiting) */}
-        {hasRemote ? (
-          <div className="video-chat__main-wrapper">
+      {/* Video Container (Dynamic Grid) */}
+      <div className={`video-chat__video-container count-${participants.length}`}>
+        {participants.map((p) => (
+          <div key={p.id} className="video-chat__video-wrapper">
             <video
               ref={(el) => {
-                if (el && el.srcObject !== remoteStreams[0].stream) {
-                  el.srcObject = remoteStreams[0].stream;
+                if (el && el.srcObject !== p.stream) {
+                  el.srcObject = p.stream;
                 }
               }}
               autoPlay
               playsInline
-              className="video-chat__main-video"
+              muted={p.isLocal}
+              className="video-chat__video-element"
             />
-            <span className="video-chat__label">Opponent</span>
+            <span className="video-chat__label">{p.label}</span>
           </div>
-        ) : (
-          <div className="video-chat__main-wrapper">
-            <video
-              ref={(el) => {
-                localVideoRef.current = el;
-                if (el && el.srcObject !== localStreamRef.current) {
-                  el.srcObject = localStreamRef.current;
-                }
-              }}
-              autoPlay
-              playsInline
-              muted
-              className="video-chat__main-video"
-            />
-            <span className="video-chat__label">You</span>
-          </div>
-        )}
-
-        {/* PiP Video (Local video overlay if remote is connected) */}
-        {hasRemote && (
-          <div className="video-chat__pip-wrapper">
-            <video
-              ref={(el) => {
-                localVideoRef.current = el;
-                if (el && el.srcObject !== localStreamRef.current) {
-                  el.srcObject = localStreamRef.current;
-                }
-              }}
-              autoPlay
-              playsInline
-              muted
-              className="video-chat__pip-video"
-            />
-            <span className="video-chat__pip-label">You</span>
-          </div>
-        )}
+        ))}
 
         {/* Status Overlay */}
         <div className="video-chat__status-overlay" style={{ color: statusColor }}>
