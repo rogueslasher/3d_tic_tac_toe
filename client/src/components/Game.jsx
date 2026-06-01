@@ -9,6 +9,8 @@ export default function Game({ children }) {
   const [winnerInfo, setWinnerInfo] = useState(null);
   const [activeLayer, setActiveLayer] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
+  const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
+  const [spectatorCount, setSpectatorCount] = useState(0);
 
   const params = new URLSearchParams(window.location.search);
   const roomId = params.get("room") || "default";
@@ -27,6 +29,8 @@ export default function Game({ children }) {
       setBoard(state.board);
       setPlayer(state.playerTurn);
       setWinnerInfo(state.winner || null);
+      setScores(state.scores || { X: 0, O: 0, draws: 0 });
+      setSpectatorCount(state.spectators ? state.spectators.length : 0);
     });
 
     socket.on("room-full", () => {
@@ -72,7 +76,6 @@ export default function Game({ children }) {
 
   return (
     <>
-      {/* UI — MUST RECEIVE setActiveLayer */}
       <GameUI
         player={player}
         playerSymbol={playerSymbol}
@@ -82,7 +85,8 @@ export default function Game({ children }) {
         board={board}
         handleMove={handleMove}
         roomId={roomId}
-
+        scores={scores}
+        spectatorCount={spectatorCount}
       />
 
 

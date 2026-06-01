@@ -300,3 +300,92 @@
     font-size: 0.6rem;
   }
 }
+
+/* ── Scoreboard ── */
+.hud__scores {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.hud__scores-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.hud__scores-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.hud__score-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.hud__score-box.divider {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.hud__score-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.hud__score-label.X {
+  color: var(--accent-x);
+}
+
+.hud__score-label.O {
+  color: var(--accent-o);
+}
+
+.hud__score-val {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.hud__draws-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Spectator Indicator ── */
+.hud__room-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud__spectators {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  animation: fade-in var(--duration-normal) var(--ease-out) forwards;
+}

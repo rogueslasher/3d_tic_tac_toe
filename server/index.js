@@ -104,6 +104,7 @@ io.on("connection", (socket) => {
         players: [],
         spectators: [],
         winner: null,
+        scores: { X: 0, O: 0, draws: 0 }
       };
     }
 
@@ -164,8 +165,19 @@ io.on("connection", (socket) => {
 
     if (result) {
       room.winner = result;
+      room.scores = room.scores || { X: 0, O: 0, draws: 0 };
+      if (result.winner === "X" || result.winner === "O") {
+        room.scores[result.winner] = (room.scores[result.winner] || 0) + 1;
+      }
     } else {
-      room.playerTurn = symbol === "X" ? "O" : "X";
+      const isDraw = room.board.every(cell => cell !== null);
+      if (isDraw) {
+        room.winner = { winner: "Draw", line: [] };
+        room.scores = room.scores || { X: 0, O: 0, draws: 0 };
+        room.scores.draws = (room.scores.draws || 0) + 1;
+      } else {
+        room.playerTurn = symbol === "X" ? "O" : "X";
+      }
     }
 
     io.to(roomId).emit("state-update", room);
@@ -193,14 +205,21 @@ io.on("connection", (socket) => {
 
     for (const roomId in rooms) {
       const room = rooms[roomId];
-      room.players = room.players.filter(id => id !== socket.id);
-      if (room.spectators) {
-        room.spectators = room.spectators.filter(id => id !== socket.id);
-      }
-      socket.to(roomId).emit("user-disconnected", socket.id);
+      const hasPlayers = room.players.includes(socket.id);
+      const hasSpectators = room.spectators && room.spectators.includes(socket.id);
 
-      if (room.players.length === 0 && (!room.spectators || room.spectators.length === 0)) {
-        delete rooms[roomId];
+      if (hasPlayers || hasSpectators) {
+        room.players = room.players.filter(id => id !== socket.id);
+        if (room.spectators) {
+          room.spectators = room.spectators.filter(id => id !== socket.id);
+        }
+        socket.to(roomId).emit("user-disconnected", socket.id);
+
+        if (room.players.length === 0 && (!room.spectators || room.spectators.length === 0)) {
+          delete rooms[roomId];
+        } else {
+          io.to(roomId).emit("state-update", room);
+        }
       }
     }
   });

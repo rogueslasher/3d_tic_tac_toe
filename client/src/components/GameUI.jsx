@@ -9,7 +9,9 @@ export default function GameUI({
   setActiveLayer,
   board,
   handleMove,
-  roomId
+  roomId,
+  scores = { X: 0, O: 0, draws: 0 },
+  spectatorCount = 0
 }) {
 
   const [copied, setCopied] = useState(false);
@@ -89,15 +91,45 @@ export default function GameUI({
         </div>
       )}
 
-      {/* Room code */}
-      <div className="hud__room" onClick={copyRoomCode} title="Click to copy room link">
-        <div>
-          <div className="hud__room-label">Room</div>
-          <div className="hud__room-code">{roomId}</div>
+      {/* Scoreboard */}
+      <div className="hud__scores">
+        <span className="hud__scores-title">Series Score</span>
+        <div className="hud__scores-row">
+          <div className="hud__score-box">
+            <span className="hud__score-label X">X</span>
+            <span className="hud__score-val">{scores.X}</span>
+          </div>
+          <div className="hud__score-box divider">:</div>
+          <div className="hud__score-box">
+            <span className="hud__score-label O">O</span>
+            <span className="hud__score-val">{scores.O}</span>
+          </div>
         </div>
-        <span className="hud__room-copy">
-          {copied ? "✓ Copied" : "📋 Copy"}
-        </span>
+        {scores.draws > 0 && (
+          <div className="hud__draws-label">
+            Draws: {scores.draws}
+          </div>
+        )}
+      </div>
+
+      <div className="hud__divider" />
+
+      {/* Room code & Spectators */}
+      <div className="hud__room-details">
+        <div className="hud__room" onClick={copyRoomCode} title="Click to copy room link">
+          <div>
+            <div className="hud__room-label">Room</div>
+            <div className="hud__room-code">{roomId}</div>
+          </div>
+          <span className="hud__room-copy">
+            {copied ? "✓ Copied" : "📋 Copy"}
+          </span>
+        </div>
+        {spectatorCount > 0 && (
+          <div className="hud__spectators" title={`${spectatorCount} spectator(s) watching`}>
+            👁 {spectatorCount} watching
+          </div>
+        )}
       </div>
 
       {/* Action buttons */}
@@ -123,7 +155,12 @@ export default function GameUI({
       <div className="hud__miniboards">
         <div className="hud__miniboards-title">Board Layers</div>
         {[0, 1, 2].map((layer) => (
-          <div key={layer} className="hud__layer">
+          <div
+            key={layer}
+            className="hud__layer"
+            onMouseEnter={() => setActiveLayer(layer)}
+            onMouseLeave={() => setActiveLayer(null)}
+          >
             <span className="hud__layer-label">Layer {layer + 1}</span>
             <div className="hud__layer-grid">
               {Array.from({ length: 9 }).map((_, i) => {
