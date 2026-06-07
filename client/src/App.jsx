@@ -14,7 +14,7 @@ export default function App() {
 >            <ambientLight intensity={0.6} />
             <directionalLight position={[5, 5, 5]} />
 
-            {/* 👇 THIS IS THE EXACT PLACE */}
+         
             <CubeGrid
               board={board}
               onCellClick={handleMove}
